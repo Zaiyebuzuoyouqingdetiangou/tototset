@@ -1,0 +1,18 @@
+.rabbit-hole-settings .inline-drawer-content {
+    padding: 10px;
+}
+.rabbit-hole-settings label {
+    display: block;
+    margin-top: 8px;
+}
+.rabbit-hole-settings .rh-num {
+    width: 64px;
+    min-width: 64px;
+}
+.rabbit-hole-settings .rabbit-hole-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+.rabbit-hole-toto-watermark{margin-left:8px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;border:1px solid var(--SmartThemeBorderColor);border-radius:999px;padding:1px 6px;vertical-align:middle;}
