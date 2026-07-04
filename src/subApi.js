@@ -17,6 +17,67 @@ function hasTotoBlock(text) {
 }
 function wrapTotoDetails(details) { return `<!-- TOTO_START -->\n${String(details || '').trim()}\n<!-- TOTO_END -->`; }
 
+
+function htmlToText(html) {
+    return String(html || '')
+        .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+        .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function extractDetailsBodyText(detailsHtml) {
+    let inner = String(detailsHtml || '')
+        .replace(/^\s*<details\b[^>]*>/i, '')
+        .replace(/<\/details>\s*$/i, '');
+    inner = inner.replace(/<summary\b[^>]*>[\s\S]*?<\/summary>/i, '');
+    return htmlToText(inner);
+}
+
+function isSubstantialDetails(detailsHtml) {
+    const html = String(detailsHtml || '');
+    if (!/<details\b[^>]*>[\s\S]*?<\/details>/i.test(html)) return false;
+    if (!/<summary\b[^>]*>[\s\S]*?<\/summary>/i.test(html)) return false;
+    const bodyText = extractDetailsBodyText(html);
+    // 空 <details>、只有标题、只有几个符号都视为失败，不能写进正文。
+    return bodyText.length >= 30;
+}
+
+function isValidTotoBlock(text) {
+    const value = String(text || '');
+    const commentBlock = value.match(TOTO_BLOCK_REGEX_ONCE)?.[0];
+    if (commentBlock) {
+        const details = commentBlock.match(/<details\b[^>]*>[\s\S]*?<\/details>/i)?.[0];
+        return isSubstantialDetails(details);
+    }
+    const legacy = value.match(/<toto\b[^>]*>([\s\S]*?)<\/toto>/i)?.[1];
+    if (legacy) {
+        const details = legacy.match(/<details\b[^>]*>[\s\S]*?<\/details>/i)?.[0];
+        return isSubstantialDetails(details);
+    }
+    return false;
+}
+
+function hasInvalidTotoBlock(text) {
+    const value = String(text || '');
+    return hasTotoBlock(value) && !isValidTotoBlock(value);
+}
+
+function validateAndWrapDetails(detailsHtml) {
+    const details = String(detailsHtml || '').trim();
+    if (!isSubstantialDetails(details)) {
+        throw new Error('副 API 返回了空的小剧场：只有 summary 或正文内容过短，已拒绝写入');
+    }
+    return wrapTotoDetails(details);
+}
+
 function getContext() {
     try {
         return globalThis.SillyTavern?.getContext?.() || null;
@@ -184,17 +245,25 @@ function extractTextFromResponse(apiType, data) {
 function normalizeTotoOutput(text) {
     let output = String(text || '').trim();
     output = output.replace(/^```(?:html)?\s*/i, '').replace(/```$/i, '').trim();
+    if (!output) throw new Error('副 API 返回空内容');
+
     const block = output.match(TOTO_BLOCK_REGEX_ONCE)?.[0];
-    if (block) return block.trim();
+    if (block) {
+        const details = block.match(/<details\b[^>]*>[\s\S]*?<\/details>/i)?.[0];
+        return validateAndWrapDetails(details);
+    }
+
     // 兼容旧版 <toto> 输出，将其转换为注释边界，避免自定义标签影响 <details> 交互。
     const legacyToto = output.match(/<toto\b[^>]*>([\s\S]*?)<\/toto>/i)?.[1];
     if (legacyToto) {
         const legacyDetails = legacyToto.match(/<details\b[^>]*>[\s\S]*?<\/details>/i)?.[0];
-        if (legacyDetails) return wrapTotoDetails(legacyDetails);
+        return validateAndWrapDetails(legacyDetails);
     }
+
     const details = output.match(/<details\b[^>]*>[\s\S]*?<\/details>/i)?.[0];
-    if (details) return wrapTotoDetails(details);
-    return wrapTotoDetails(`<details><summary>【兔子洞：副 API 小剧场】</summary>${output}</details>`);
+    if (details) return validateAndWrapDetails(details);
+
+    throw new Error('副 API 未返回完整 <details> 小剧场');
 }
 
 async function fetchJson(url, options) {
@@ -338,7 +407,8 @@ async function waitForStableAssistantText(index, { checks = 3, interval = 700 } 
         const message = getChat()[index];
         if (!message || message.is_user) return '';
         const current = cleanAssistantText(message.mes || '');
-        if (!current || hasTotoBlock(message.mes || '')) return '';
+        if (!current) return '';
+        if (hasTotoBlock(message.mes || '') && !hasInvalidTotoBlock(message.mes || '')) return '';
         if (current === previous) {
             stable += 1;
         } else {
@@ -348,6 +418,43 @@ async function waitForStableAssistantText(index, { checks = 3, interval = 700 } 
         await sleep(interval);
     }
     return previous;
+}
+
+
+function buildCompactRabbitHoleRetryPrompt(assistantText = '') {
+    return String.raw`
+你是 SillyTavern 兔子洞小剧场副 API。上一次输出为空或不完整，请重新生成。
+
+硬性要求：
+1. 只输出以下边界包裹的 HTML，不要解释，不要代码块。
+2. 必须以 <!-- TOTO_START --> 开始，以 <!-- TOTO_END --> 结束。
+3. 中间必须是一个完整 <details>，包含 <summary> 和可展开正文。
+4. <summary> 格式为：【兔子洞：标题】。
+5. <summary> 后面的正文至少 150 个中文字符，不能为空，不能只写标题。
+6. 使用 inline style，做成有媒介感的小剧场 UI；可用 div、span、grid/flex、渐变、边框、阴影。
+7. 所有可见文字用简体中文。
+
+本轮正文：
+${String(assistantText || '').slice(0, 3000)}
+
+现在直接输出：
+<!-- TOTO_START -->
+<details style="display:block;width:100%;box-sizing:border-box;">
+<summary style="cursor:pointer;">【兔子洞：标题】</summary>
+<div style="box-sizing:border-box;line-height:1.6;overflow-wrap:anywhere;">这里替换为至少150个中文字符的小剧场正文和完整HTML结构。</div>
+</details>
+<!-- TOTO_END -->`;
+}
+
+async function callSubApiWithRetry(prompt, settings, assistantText) {
+    try {
+        return await callSubApi(prompt, settings);
+    } catch (error) {
+        const message = String(error?.message || error || '');
+        if (!/空内容|空的小剧场|未返回完整|正文内容过短|summary/i.test(message)) throw error;
+        if (settings.debug) console.debug('[RabbitHole] sub API first output invalid; retry with compact prompt:', message);
+        return await callSubApi(buildCompactRabbitHoleRetryPrompt(assistantText), settings);
+    }
 }
 
 export async function generateRabbitHoleForLatestMessage(options = {}) {
@@ -363,7 +470,9 @@ export async function generateRabbitHoleForLatestMessage(options = {}) {
 
     const chat = getChat();
     const message = chat[index];
-    if (!message?.mes || hasTotoBlock(message.mes)) return;
+    if (!message?.mes) return;
+    const invalidExistingToto = hasInvalidTotoBlock(message.mes);
+    if (hasTotoBlock(message.mes) && !invalidExistingToto) return;
 
     const signature = buildMessageSignature(index, assistantText);
 
@@ -374,7 +483,8 @@ export async function generateRabbitHoleForLatestMessage(options = {}) {
         if (settings.debug) console.debug('[RabbitHole] skip: latest assistant message did not change after generation event');
         return;
     }
-    if (processedSignatures.has(signature) || pendingSignatures.has(signature)) return;
+    if (!invalidExistingToto && (processedSignatures.has(signature) || pendingSignatures.has(signature))) return;
+    if (invalidExistingToto) processedSignatures.delete(signature);
 
     const contextText = buildReferenceContext(chat, index, settings.subApi?.contextMode || 'current_plus_5');
     const prompt = buildStandaloneRabbitHolePrompt(settings, { assistantText, contextText }, 'sub_api');
@@ -383,11 +493,12 @@ export async function generateRabbitHoleForLatestMessage(options = {}) {
     processing = true;
     pendingSignatures.add(signature);
     try {
-        const toto = await callSubApi(prompt, settings);
+        const toto = await callSubApiWithRetry(prompt, settings, assistantText);
         if (!toto) throw new Error('副 API 未返回内容');
 
         const latest = getChat()[index];
-        if (!latest?.mes || hasTotoBlock(latest.mes)) return;
+        if (!latest?.mes) return;
+        if (hasTotoBlock(latest.mes) && !hasInvalidTotoBlock(latest.mes)) return;
 
         const latestText = cleanAssistantText(latest.mes);
         const latestSignature = buildMessageSignature(index, latestText);

@@ -1,7 +1,7 @@
 import { getSettings, updateSettings, updateSubApiSettings, resetSettings } from './settings.js';
 import { clearLastCombo } from './storage.js';
 import { clearRabbitHolePrompt } from './injector.js';
-import { fetchSubApiModels, saveFetchedModel } from './subApi.js';
+import { fetchSubApiModels, saveFetchedModel, callSubApi } from './subApi.js';
 
 function checked(id, value) {
     $(id).prop('checked', !!value);
@@ -119,6 +119,7 @@ export function initRabbitHoleUI() {
 
         <div class="flex-container alignitemscenter" style="gap:8px;flex-wrap:wrap;margin:6px 0;">
           <button id="rh_fetch_models" class="menu_button" type="button">拉取模型列表</button>
+          <button id="rh_test_sub_api" class="menu_button" type="button">测试副 API</button>
           <span id="rh_fetch_models_status" style="opacity:.75;font-size:12px;"></span>
         </div>
 
@@ -239,6 +240,24 @@ export function initRabbitHoleUI() {
         } catch (error) {
             $('#rh_fetch_models_status').text('拉取失败，请手动填写模型名');
             toastr?.error?.(`拉取模型失败：${error.message || error}`);
+        }
+    });
+
+    $('#rh_test_sub_api').on('click', async () => {
+        $('#rh_fetch_models_status').text('测试副 API 中...');
+        const testPrompt = String.raw`你是兔子洞小剧场副 API。请只输出一个完整 HTML 小剧场，不要解释，不要代码块。
+必须以 <!-- TOTO_START --> 开始，以 <!-- TOTO_END --> 结束。
+中间必须且只能包含一个完整 <details>，<summary> 格式为【兔子洞：副 API 测试成功】，summary 后必须有至少150个中文字符的可展开正文内容。
+请做成一个简洁但完整的测试小剧场 UI，所有样式写 inline style。`;
+        try {
+            const result = await callSubApi(testPrompt, getSettings());
+            console.log('[RabbitHoleTest] sub API test result:', result);
+            $('#rh_fetch_models_status').text('副 API 测试成功，详情见控制台');
+            toastr?.success?.('副 API 测试成功，已在控制台输出结果');
+        } catch (error) {
+            console.warn('[RabbitHoleTest] sub API test failed:', error);
+            $('#rh_fetch_models_status').text(`副 API 测试失败：${error.message || error}`);
+            toastr?.error?.(`副 API 测试失败：${error.message || error}`);
         }
     });
 
