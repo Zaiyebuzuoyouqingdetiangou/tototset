@@ -1,0 +1,17 @@
+{
+  "display_name": "兔子洞test / Rabbit Hole Test",
+  "loading_order": 99,
+  "js": "index.js",
+  "css": "style.css",
+  "author": "Toto",
+  "version": "0.22.0",
+  "homePage": "https://github.com/Zaiyebuzuoyouqingdetiangou/tototset",
+  "auto_update": true,
+  "generate_interceptor": "rabbitHoleTestGenerateInterceptor",
+  "minimum_client_version": "1.13.0",
+  "hooks": {
+    "disable": "onDisable",
+    "clean": "onClean"
+  },
+  "description": "Rabbit Hole Theater test build for副 API testing. Display name changed to 兔子洞test, GitHub homePage set to tototset, with independent settings namespace and interceptor name to avoid conflicting with the stable Rabbit Hole extension."
+}
