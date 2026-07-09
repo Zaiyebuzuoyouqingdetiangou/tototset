@@ -321,33 +321,6 @@ function compactMediaRule() {
 `;
 }
 
-
-function visualColorTruthRule() {
-    return String.raw`
-视觉明暗一致性:
-  - 若兔子洞自述、标题、UI自查或视觉签名声称白底、浅色、纸面、明亮呈现，实际主容器必须写入对应浅色 background/background-color。
-  - 禁止一边声称白底/浅色/纸面，一边使用 #000～#2f2f2f、black、深灰、rgba 黑色或红黑警告底作为主背景。
-  - 若实际 CSS 使用暗色主背景，不得把它描述为白底、浅色或纸面；不得用文字声明替代真实 CSS。`;
-}
-
-
-function cssSvgFulfillmentRule() {
-    return String.raw`
-CSS/SVG 视觉兑现:
-  - 兔子洞不应只依赖文字说明成立；每轮都应优先考虑使用可渲染 CSS/SVG/HTML 结构表现媒介本体、空间层级、视觉锚点、材质质感与轻量动态。
-  - 凡是标题、结构、文案或展现形式暗示运动、变化、时间推进、连续状态、环境变化、交互反馈或非静态观看方式，必须用实际 CSS/SVG/HTML 视觉机制兑现。
-  - 如果没有实现对应视觉机制，不得仅用文字宣称其正在发生；动态与 SVG 必须服务本轮媒介和剧情氛围，禁止为了炫技堆叠无意义动效。`;
-}
-
-function compactFullAestheticRule() {
-    return String.raw`
-完整审美核心:
-  - 媒介本体：展现形式必须决定 DOM/CSS 骨架、视觉轮廓、材质、空间关系、阅读路径和文字寄生方式；删除标题后仍应能看出本轮形式。
-  - 视觉完成度：必须具备主视觉锚点、两层以上空间层级、专属色系/材质、文本长短错落、排版呼吸感、自适配布局与中文界面。
-  - 降级否决：禁止退化为普通信息卡、报告页、档案页、状态栏、系统面板、检修页或多块同构矩形信息框；禁止仅靠换标题/颜色/图标/边框伪装新 UI。
-  - 复杂度：可自然使用 grid/flex/叠层/SVG/渐变/阴影/纹理/遮罩/filter/clip-path/轻量动效，但所有效果必须服务本轮媒介，不得乱堆。`;
-}
-
 function compactSafetyRule() {
     return String.raw`
 HTML 安全:
@@ -368,8 +341,6 @@ ${selectedFormats || '- 无'}
 `);
     chunks.push(compactCreativeRule(!!settings.creativeExpansionMode));
     chunks.push(compactMediaRule());
-    chunks.push(visualColorTruthRule());
-    chunks.push(cssSvgFulfillmentRule());
     if (settings.userDirectivePriority && directive) {
         chunks.push(String.raw`
 用户点播优先:
@@ -404,49 +375,124 @@ ${shortVisualAvoidance(combo, 3)}
 function buildFullPrompt({ combo, settings, selectedThemes, selectedFormats, visualSceneryMode, tarotRulesText, tarotRequirement, uiReviewFocus, cooldownWindow, directive }) {
     const chunks = [];
     chunks.push('<RabbitHoleTheaterAutoInjection>');
-    chunks.push(coreOutputProtocol());
-    chunks.push(String.raw`
-本轮抽取模式: ${samplingModeLabel(combo, settings)}
-本轮主题元素:
-${(combo?.samplingMode || settings?.samplingMode) === 'format_only' ? '- 未抽取；不得自行补造主题元素。' : (selectedThemes || '- 无')}
+    chunks.push('你必须在本轮主回复完成后，额外输出一个【兔子洞】小剧场模块。此模块由 SillyTavern 第三方扩展自动注入，不需要用户在预设里放任何内容。');
+    chunks.push(RAW_EXECUTION_RULES);
+    chunks.push(UNIVERSAL_EXECUTION_CORE);
+    chunks.push(ITEM_INTERPRETATION_RULES);
+    if (settings.creativeExpansionMode) chunks.push(CREATIVE_EXPANSION_RULES);
+    else chunks.push(CLASSIC_CONVERGENCE_RULES);
+    chunks.push(FORMAT_PRIORITY_RULES);
+    chunks.push(MEDIA_SELF_JUDGMENT_RULES);
+    chunks.push(MODULAR_DEGRADATION_RULES);
+    if (settings.hardChineseLock) chunks.push(RUNTIME_LANGUAGE_RULES);
+    chunks.push(STATE_BAR_ISOLATION_RULES);
+    if (settings.hardStartup) chunks.push(HARD_STARTUP_PROTOCOL);
+    chunks.push(FINAL_GUARD_PROTOCOL);
 
-本轮展现形式:
-${selectedFormats || '- 无'}
+    if (settings.userDirectivePriority) {
+        chunks.push(USER_REQUEST_OVERRIDE_RULES);
+        chunks.push(String.raw`
+正文/兔子洞点播指令优先:
+  enforcement_level: "mandatory"
+  rule:
+    - "正文叙事、剧情推进与角色表现为最高优先级。"
+    - "兔子洞只能作为回复末尾的附属小剧场，不得稀释、打断、污染或抢占正文表现重心。"
+    - "不得为了生成复杂 UI 而压缩正文、跳过剧情、改变叙事方向或替代主回复。"
 `);
-    chunks.push(settings.creativeExpansionMode ? compactCreativeRule(true) : compactCreativeRule(false));
-    chunks.push(compactFullAestheticRule());
-    chunks.push(visualColorTruthRule());
-    chunks.push(cssSvgFulfillmentRule());
-    if (settings.userDirectivePriority && directive) {
-        chunks.push(String.raw`
-用户点播优先:
-  最后一条用户输入已匹配到兔子洞点播条目；点播优先，未指定部分由插件随机补足。兔子洞不得抢占、稀释或改写主回复正文。`);
     }
-    if (settings.uiAudit) {
-        chunks.push(String.raw`
-视觉完成度校验:
-  输出前检查媒介本体、视觉锚点、空间层级、材质质感、文本节奏、自适配、真实 CSS 背景、是否退化为普通卡片/报告/状态栏；失败则重写。`);
-    }
+
+    chunks.push(modeInstruction(combo, settings));
+    chunks.push(String.raw`
+本轮抽取结果:
+  主题元素: "${themeAuditText(combo, settings)}"
+  展现形式: "${combo.formats.map(x => `【${x.id} ${x.title}】`).join(' + ') || '无'}"
+`);
+
+    if (settings.uiAudit) chunks.push(UI_AUDIT_PROTOCOL);
     if (settings.avoidRepeat) {
         chunks.push(String.raw`
-近期真实视觉避让:
+最近视觉签名摘要【避让对象，不得模仿，不得复用其 UI 骨架；只来自已经实际生成成功的历史，不预抽未来轮次】:
 ${shortVisualAvoidance(combo, 3)}
-  若近期真实输出已出现暗色主底盘，本轮不得继续使用黑底、深灰底、红黑警告底、控制台或报告式承载；必须更换明暗关系、媒介结构和阅读路径。`);
-        chunks.push(String.raw`
-视觉冷却:
-  必须避开近期真实输出中过度重复的底色、布局、阅读路径、信息单位和媒介气质；不得用标题、颜色或局部装饰变化伪装新 UI。`);
+`);
+        chunks.push(VISUAL_FAMILY_COOLDOWN_RULES);
     }
+
+    if (settings.uiAudit) {
+        chunks.push(String.raw`
+本轮 UI审查重点:
+  note: "只用于自检，不得变成可见标题、标签、固定组件或固定版式。"
+  value: "${uiReviewFocus}"
+`);
+    }
+
     if (visualSceneryMode) {
         chunks.push(String.raw`
-动态渐变模式:
-  允许使用纯 CSS/SVG 构建风景化、光影化、流动渐变或环境动态效果；必须服务本轮展现形式，不得为了动而动。`);
+Visual Scenery 动态渐变模式:
+  value: true
+  rule:
+    - "本轮已启用或抽到 Visual Scenery，允许纯 CSS 风景、流动渐变、光影与环境动态；必须按视觉画布优先执行。"
+`);
         chunks.push(VISUAL_SCENERY_RULES);
     }
+
     if (tarotRulesText) chunks.push(TAROT_IMAGE_RULES);
-    chunks.push(compactSafetyRule());
+    chunks.push(RENDER_SAFE_HTML_RULE);
+    chunks.push(STRUCTURE_INTEGRITY_RULES);
+    chunks.push(OUTPUT_FORMAT_LIMIT);
+    chunks.push(CSS_SCOPE_RULES);
+    chunks.push(DYNAMIC_VISUAL_RULES);
+    chunks.push(DYNAMIC_COMMITMENT_RULES);
+
     chunks.push(String.raw`
-最终保底:
-  先完整生成主回复正文；正文结束后必须继续生成兔子洞。先保证 <toto> 出现，再追求复杂度。不要解释规则，直接输出最终内容。`);
+本轮边界:
+  enforcement_level: "mandatory"
+  rule:
+    - "不得以任何形式干预或改写主线叙事的内容。"
+    - "主线叙事与兔子洞必须保持模块边界，不得互相包裹或破坏。"
+`);
+
+    chunks.push(themeSection(combo, settings, selectedThemes));
+    chunks.push(String.raw`
+本轮随机展现形式:
+  enforcement_level: "mandatory"
+  rule: "必须执行；以下为按 ID 从母本检索的对应完整描述。"
+${selectedFormats}
+`);
+
+    chunks.push(thinkingBlock(combo, getLastCombo(), settings, directive));
+    if (settings.userDirectivePriority && directive) {
+        chunks.push(String.raw`
+用户指令状态:
+  value: "插件已在最后一条用户输入中匹配到抽取池内点播条目，必须优先执行用户点播；未被用户指定的部分可由插件随机补足。"
+`);
+    }
+    if (settings.showCot) chunks.push(thinkingPipeline(settings));
+    else chunks.push(String.raw`
+执行管线:
+  enforcement_level: "mandatory"
+  rule:
+    - "严禁输出 <thinking> 块。"
+    - "严禁输出 Markdown 代码块、自然语言解释、规则说明或调试信息。"
+    - "直接输出完整闭合的 HTML。"
+`);
+
+    chunks.push(String.raw`
+最终输出硬性要求:
+  enforcement_level: "mandatory"
+  rule:
+    - "【输出位置最高优先级】必须先完整生成主回复正文；正文全部结束后，才能追加兔子洞模块。兔子洞必须是本轮 assistant 消息的最后一个可见内容。"
+    - '小剧场最外层必须完整包裹在 <toto data-rabbit-hole="true" style="display:block;"> 与 </toto> 之间，禁止遗漏闭合标签；<toto> 内部必须使用 <details> 折叠模块，并用 <summary> 显示【兔子洞：本次标题】。'
+    - "内部 HTML 不提供固定模板；必须首先落实本轮展现形式，并通过 UI审查重点。经典模式还必须自然融合本轮主题元素；仅展现形式模式不得自行补造主题元素。"
+    - "所有 HTML 样式使用 inline style；必须执行自适配、文字安全、复杂度硬指标、展现形式优先与状态栏隔离。"
+    - "${cooldownWindow ? `严禁复用最近 ${cooldownWindow} 轮内已经实际出现过的完全相同主题、展现形式或近似视觉观感；不得自行回到近期模板。` : `本轮未启用冷却窗口，但仍不得生成通用模板或与本轮展现形式无关的偷懒 UI。`}"
+    - "${tarotRequirement}"
+    - "不要解释你正在遵守规则，直接输出最终可渲染 HTML。"
+    - '最终必须输出完整 <toto data-rabbit-hole="true" style="display:block;">...</toto>。'
+    - "禁止把兔子洞最外层写成裸 <div>；如果已写出 <div> 主容器，必须把它整体放进 <toto data-rabbit-hole=\"true\" style=\"display:block;\"><details>...</details></toto> 内部。"
+    - "<toto> 内部必须包含一个完整 <details> 折叠模块。"
+    - "<summary> 必须包含【兔子洞：标题】。"
+    - "禁止遗漏 </details> 或 </toto>。"
+`);
     chunks.push('</RabbitHoleTheaterAutoInjection>');
     return chunks.filter(Boolean).join('\n\n').trim();
 }

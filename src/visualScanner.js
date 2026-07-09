@@ -112,76 +112,13 @@ function analyzeDomStructure(html) {
 }
 
 
-
-function expandHexColor(hex) {
-    const raw = String(hex || '').replace('#', '').trim();
-    if (/^[0-9a-f]{3}$/i.test(raw)) {
-        return raw.split('').map(x => x + x).join('');
-    }
-    if (/^[0-9a-f]{6}$/i.test(raw)) return raw;
-    return '';
-}
-
-function luminanceFromRgb(r, g, b) {
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function colorValueLuminance(value) {
-    const v = String(value || '').toLowerCase();
-    if (/\bblack\b/.test(v)) return 0;
-    if (/\bwhite\b/.test(v)) return 255;
-    const rgba = v.match(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/);
-    if (rgba) {
-        const alpha = rgba[4] === undefined ? 1 : Number(rgba[4]);
-        if (!Number.isNaN(alpha) && alpha < 0.25) return null;
-        return luminanceFromRgb(Number(rgba[1]), Number(rgba[2]), Number(rgba[3]));
-    }
-    const hexes = [...v.matchAll(/#([0-9a-f]{3}|[0-9a-f]{6})\b/gi)]
-        .map(m => expandHexColor(m[1]))
-        .filter(Boolean);
-    if (hexes.length) {
-        const values = hexes.map(hex => {
-            const r = parseInt(hex.slice(0, 2), 16);
-            const g = parseInt(hex.slice(2, 4), 16);
-            const b = parseInt(hex.slice(4, 6), 16);
-            return luminanceFromRgb(r, g, b);
-        });
-        // For gradients, average the first two stops; for flat color, use the first.
-        const sample = values.slice(0, Math.min(2, values.length));
-        return sample.reduce((a, b) => a + b, 0) / sample.length;
-    }
-    return null;
-}
-
-function extractBackgroundValues(html) {
-    const values = [];
-    const input = String(html || '');
-    const re = /background(?:-color)?\s*:\s*([^;"']+)/gi;
-    let match;
-    while ((match = re.exec(input))) {
-        const value = String(match[1] || '').trim();
-        if (value) values.push(value);
-    }
-    return values;
-}
-
 function detectBaseColor(html) {
-    const values = extractBackgroundValues(html);
-    const luminances = values.map(colorValueLuminance).filter(v => typeof v === 'number' && !Number.isNaN(v));
-
-    // The first explicit background usually belongs to the main container. Give it priority
-    // so a dark outer shell cannot be mislabelled as white because of light inner cards.
-    if (luminances.length) {
-        const first = luminances[0];
-        if (first < 90) return '暗色高对比底盘';
-        if (first > 190) return '浅色纸面/白底底盘';
-        const darkCount = luminances.filter(v => v < 90).length;
-        const lightCount = luminances.filter(v => v > 190).length;
-        if (darkCount > lightCount) return '暗色高对比底盘';
-        if (lightCount > darkCount) return '浅色纸面/白底底盘';
-    }
-
-    if (/radial-gradient|conic-gradient|linear-gradient/i.test(html)) return '渐变/混合色底盘';
+    const text = String(html || '').toLowerCase();
+    const darkHits = count(/background(?:-color)?\s*:\s*(?:#(?:000|111|121212|1[0-9a-f]{5}|2[0-9a-f]{5})|black|rgba?\(\s*0\s*,\s*0\s*,\s*0|linear-gradient\([^;"']*(?:#000|#111|#1|black))/gi, text);
+    const lightHits = count(/background(?:-color)?\s*:\s*(?:#(?:fff|f[0-9a-f]{5}|e[0-9a-f]{5})|white|rgba?\(\s*255\s*,\s*255\s*,\s*255)/gi, text);
+    if (darkHits >= Math.max(2, lightHits + 1)) return '暗色高对比底盘';
+    if (lightHits >= Math.max(2, darkHits + 1)) return '浅色纸面/白底底盘';
+    if (/gradient|radial-gradient|conic-gradient|linear-gradient/i.test(html)) return '渐变/混合色底盘';
     return '中性或混合底盘';
 }
 

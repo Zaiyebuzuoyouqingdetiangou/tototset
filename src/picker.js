@@ -91,16 +91,6 @@ function isReportLikePresentation(item) {
     return /(报告|报表|诊断书|诊断|审查表|检查表|观察记录|记录卡|分析报告|身体状态报告|状态栏|角色面板|属性页|任务日志|系统面板|控制台|后台|监控台|档案)/i.test(text);
 }
 
-
-function isRemovedRegionalTheme(item) {
-    // Removed from random and directive pools by ID. Text keywords are intentionally not kept here.
-    return item?.id === 'G.3.5' || item?.id === 'G.3.11';
-}
-
-function filterRemovedRegionalThemes(pool) {
-    return pool.filter(item => !isRemovedRegionalTheme(item));
-}
-
 function filterReportLikePresentations(pool, settings) {
     if (settings?.allowReportLikeRandom) return pool;
     const filtered = pool.filter(item => !isReportLikePresentation(item));
@@ -354,11 +344,11 @@ export function pickCombination(settings) {
     const themeCount = weightedThemeCount(settings);
     const formatCount = weightedFormatCount(settings);
 
-    let themePool = filterRemovedRegionalThemes(THEMATIC_CATEGORIES).filter(item => allowByMode(item, settings.mode));
+    let themePool = THEMATIC_CATEGORIES.filter(item => allowByMode(item, settings.mode));
     let formatPool = PRESENTATION_FORMATS.filter(item => allowByMode(item, settings.mode));
     formatPool = filterReportLikePresentations(formatPool, settings);
 
-    if (!themePool.length) themePool = filterRemovedRegionalThemes(THEMATIC_CATEGORIES);
+    if (!themePool.length) themePool = THEMATIC_CATEGORIES;
     if (!formatPool.length) formatPool = filterReportLikePresentations(PRESENTATION_FORMATS, settings);
 
     const result = applyDirectiveOrRandom({ settings, themePool, formatPool, themeCount, formatCount, last, recent });

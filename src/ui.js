@@ -16,7 +16,7 @@ export function initRabbitHoleUI() {
 <div id="rabbit_hole_theater_settings" class="rabbit-hole-settings">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>兔子洞小剧场 / Rabbit Hole Theater</b><span class="rabbit-hole-toto-watermark">Toto v0.31.23-test</span>
+      <b>兔子洞小剧场 / Rabbit Hole Theater</b><span class="rabbit-hole-toto-watermark">Toto v0.31.21</span>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
@@ -30,7 +30,7 @@ export function initRabbitHoleUI() {
           <option value="full">完整规则模式</option>
         </select>
       </label>
-      <div class="rabbit-hole-subnote" style="margin:-4px 0 8px 0;opacity:.72;font-size:12px;line-height:1.45;">轻量模式更省 token、重点更集中；完整模式为测试用压缩审美核心，不再塞入冗长重复规则。</div>
+      <div class="rabbit-hole-subnote" style="margin:-4px 0 8px 0;opacity:.72;font-size:12px;line-height:1.45;">轻量模式更省 token、重点更集中；完整模式保留更详细规则。</div>
 
       <label class="checkbox_label"><input id="rh_user_directive" type="checkbox"> 用户指令优先（正文/兔子洞点播）</label>
 
