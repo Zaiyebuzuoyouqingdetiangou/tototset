@@ -1,10 +1,18 @@
 import { extension_settings } from '../../../../extensions.js';
 import { saveSettingsDebounced } from '../../../../../script.js';
 
-export const MODULE_NAME = 'rabbit_hole_theater_test';
+export const MODULE_NAME = 'rabbit_hole_theater';
+
+function cloneDefaultSettings() {
+    return typeof structuredClone === 'function'
+        ? structuredClone(defaultSettings)
+        : JSON.parse(JSON.stringify(defaultSettings));
+}
 
 export const defaultSettings = Object.freeze({
     enabled: true,
+    // 强变量：开启后每轮生成前强制注入兔子洞规则。
+    autoRabbitHoleInjection: true,
 
     // 一体化模式：不再把 Independent / Canon 拆成用户可选项。
     // 插件内部会根据本轮抽到的主题/展现形式自动判断：
@@ -12,19 +20,8 @@ export const defaultSettings = Object.freeze({
     // - 否则按独立兔子洞执行。
     mode: 'integrated',
 
-    // 兔子洞生成模式：main=跟随主模型生成；sub_api=使用副 API 独立生成。
-    generationMode: 'main',
-
-    // 副 API 设置。默认复杂优先，maxTokens 给高一点；实际可用上限以上游 API / 模型为准。
-    subApi: {
-        apiType: 'openai', // openai | gemini | anthropic | custom
-        endpoint: '',
-        apiKey: '',
-        model: '',
-        temperature: 0.95,
-        maxTokens: 16000,
-        contextMode: 'current_plus_5', // current | current_plus_1 | current_plus_3 | current_plus_5
-    },
+    // 注入模式：lite=轻量规则；full=完整规则。
+    injectionMode: 'lite',
 
     // 抽取模式：classic=主题元素+展现形式；format_only=仅展现形式。
     samplingMode: 'classic',
@@ -42,6 +39,8 @@ export const defaultSettings = Object.freeze({
     cooldownRounds: 10,
     // 增强版式多样性：随机时更偏向带界面结构/视觉锚点的展现形式，减少纯文字类连续出现。
     richFormatBias: true,
+    // 代码块急救模式：仅在兔子洞显示成代码块时临时开启。默认关闭，避免平时影响 UI 发挥。
+    codeBlockRescueMode: false,
     // 强制启动增强：将小剧场作为本轮输出格式的一部分，而不是可选附加项。
     hardStartup: true,
     // 语言锁定增强：所有可见 UI 文案也必须为简体中文，禁止英文承担主要界面标签。
@@ -49,12 +48,14 @@ export const defaultSettings = Object.freeze({
     // 勾选后，最后一条用户消息里的“兔子洞：xxx / 兔子洞主题：xxx / 兔子洞格式：xxx”等会优先生效。
     userDirectivePriority: true,
 
+    // 发散孵化模式（测试版）：开启后把抽取结果作为灵感基底，允许在核心气味内扩展库外媒介和细节。
+    creativeExpansionMode: false,
+
     // 勾选后，每轮强制把 10.2.2 Visual Scenery 纳入本轮展现形式。
     forceVisualScenery: false,
 
     // 勾选后，每轮额外注入 UI 自查与去模板化要求，减少相似黑框/记录卡。
     uiAudit: true,
-
     // 原规则要求 1-3 个主题、1-2 个展现形式，作为固定协议，不再拆成 UI 设置。
     themesMin: 1,
     themesMax: 3,
@@ -70,35 +71,14 @@ export const defaultSettings = Object.freeze({
     debug: false,
 });
 
-function mergeSubApiSettings(settings) {
-    if (!settings.subApi || typeof settings.subApi !== 'object') {
-        settings.subApi = structuredClone(defaultSettings.subApi);
-    }
-    for (const [key, value] of Object.entries(defaultSettings.subApi)) {
-        if (settings.subApi[key] === undefined) settings.subApi[key] = value;
-    }
-    if (!['openai', 'gemini', 'anthropic', 'custom'].includes(settings.subApi.apiType)) {
-        settings.subApi.apiType = defaultSettings.subApi.apiType;
-    }
-    if (!['current', 'current_plus_1', 'current_plus_3', 'current_plus_5'].includes(settings.subApi.contextMode)) {
-        settings.subApi.contextMode = defaultSettings.subApi.contextMode;
-    }
-    settings.subApi.temperature = Number(settings.subApi.temperature);
-    if (!Number.isFinite(settings.subApi.temperature)) settings.subApi.temperature = defaultSettings.subApi.temperature;
-    settings.subApi.temperature = Math.max(0, Math.min(2, settings.subApi.temperature));
-
-    settings.subApi.maxTokens = Math.floor(Number(settings.subApi.maxTokens) || defaultSettings.subApi.maxTokens);
-    settings.subApi.maxTokens = Math.max(512, Math.min(32768, settings.subApi.maxTokens));
-}
-
 export function getSettings() {
     if (!extension_settings[MODULE_NAME] || typeof extension_settings[MODULE_NAME] !== 'object') {
-        extension_settings[MODULE_NAME] = structuredClone(defaultSettings);
+        extension_settings[MODULE_NAME] = cloneDefaultSettings();
     }
     const settings = extension_settings[MODULE_NAME];
     for (const [key, value] of Object.entries(defaultSettings)) {
         if (settings[key] === undefined) {
-            settings[key] = structuredClone(value);
+            settings[key] = value;
         }
     }
 
@@ -107,8 +87,6 @@ export function getSettings() {
         settings.mode = settings.mode === 'off' ? 'off' : 'integrated';
     }
 
-    if (!['main', 'sub_api'].includes(settings.generationMode)) settings.generationMode = defaultSettings.generationMode;
-    mergeSubApiSettings(settings);
 
     // 旧版 showWonderland 迁移为 showCot，并删除旧字段以免 UI 混乱。
     if (settings.showCot === undefined && settings.showWonderland !== undefined) {
@@ -123,6 +101,9 @@ export function getSettings() {
     settings.formatsMin = Number(settings.formatsMin) || defaultSettings.formatsMin;
     settings.formatsMax = Number(settings.formatsMax) || defaultSettings.formatsMax;
     settings.cooldownRounds = Math.max(1, Number(settings.cooldownRounds) || defaultSettings.cooldownRounds);
+    if (settings.autoRabbitHoleInjection === undefined) settings.autoRabbitHoleInjection = settings.enabled !== false;
+    if (settings.codeBlockRescueMode === undefined) settings.codeBlockRescueMode = defaultSettings.codeBlockRescueMode;
+    if (!['lite', 'full'].includes(settings.injectionMode)) settings.injectionMode = defaultSettings.injectionMode;
     if (!['classic', 'format_only'].includes(settings.samplingMode)) settings.samplingMode = defaultSettings.samplingMode;
     settings.depth = Number(settings.depth) || 0;
     return settings;
@@ -133,14 +114,7 @@ export function updateSettings(patch) {
     saveSettingsDebounced();
 }
 
-export function updateSubApiSettings(patch) {
-    const settings = getSettings();
-    settings.subApi = { ...settings.subApi, ...patch };
-    mergeSubApiSettings(settings);
-    saveSettingsDebounced();
-}
-
 export function resetSettings() {
-    extension_settings[MODULE_NAME] = structuredClone(defaultSettings);
+    extension_settings[MODULE_NAME] = cloneDefaultSettings();
     saveSettingsDebounced();
 }

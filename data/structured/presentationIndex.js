@@ -155,6 +155,18 @@ export const PRESENTATION_FORMATS = [
     "raw": "* **求助AI**: 模仿大模型对话界面，给出一本正经但荒谬的回答。"
   },
   {
+    "id": "1.3.2.6.charai",
+    "group": "1",
+    "title": "当Char变成AI",
+    "summary": "模仿特定 AI 助手的对话界面和回答语气，但 AI 人格内核实际是 char。",
+    "tags": [
+      "independent",
+      "digital",
+      "humor"
+    ],
+    "raw": "* **1.3.2.6.1 当Char变成AI (AI Persona Parody)**: 模仿特定 AI 助手（如豆包/ChatGPT/Siri 等）的对话界面和回答语气，但“AI 的人格内核”实际上是 {{char}}。"
+  },
+  {
     "id": "1.4.1",
     "group": "1",
     "title": "直播界面",
@@ -274,6 +286,18 @@ export const PRESENTATION_FORMATS = [
       "paper"
     ],
     "raw": "* **2.1.6 记仇本 / 旧账**：逐条记录相处中的旧账。"
+  },
+  {
+    "id": "2.1.8",
+    "group": "2",
+    "title": "恋爱日记",
+    "summary": "精美恋爱纪念手账，以时间为轴记录关键节点；必须结合 details 嵌套翻页机制。",
+    "tags": [
+      "independent",
+      "paper",
+      "interactive"
+    ],
+    "raw": "* **2.1.8 恋爱日记 (Love Chronicle / Flip-book)**: 模仿一本精美的恋爱纪念手账。以时间为轴，记录关系中的关键节点。必须结合可交互的翻页机制（<details> 嵌套），让 {{user}} 手动点击翻到下一页；每一页的视觉风格可随情绪变化。"
   },
   {
     "id": "2.2.2",
@@ -420,6 +444,31 @@ export const PRESENTATION_FORMATS = [
     "raw": "* **4.3.7 伪纪录片**：模仿 BBC 或 Netflix 纪录片旁白。"
   },
   {
+    "id": "4.3.8",
+    "group": "4",
+    "title": "好物分享",
+    "summary": "模仿综艺“热烈欢迎”式好物推荐或直播开箱，一本正经推荐生活中离不开的离谱物品。",
+    "tags": [
+      "independent",
+      "media",
+      "humor"
+    ],
+    "raw": "* **4.3.8 好物分享 (Recommendation Show)**: 模仿综艺中“热烈欢迎”式的好物推荐环节或直播开箱。以一本正经但内容离谱的方式，向观众推荐其生活中离不开的物品。"
+  },
+  {
+    "id": "4.3.9",
+    "group": "4",
+    "title": "超市综艺",
+    "summary": "模仿限时购物综艺，在规定时间内完成指定金额采购挑战，包含倒计时、价格标签、购物车清单与策略分歧。",
+    "tags": [
+      "independent",
+      "media",
+      "game",
+      "humor"
+    ],
+    "raw": "* **4.3.9 超市综艺 (Supermarket Sweep)**: 模仿限时购物综艺规则。需要在规定时间内在超市完成指定金额的采购挑战，包含倒计时、商品价格标签、购物车清单，以及过程中的互动与策略分歧。"
+  },
+  {
     "id": "4.5.1",
     "group": "4",
     "title": "文学文本",
@@ -451,17 +500,6 @@ export const PRESENTATION_FORMATS = [
       "literary"
     ],
     "raw": "* **4.5.2 童话书风格**：很久很久以前式童话语气。"
-  },
-  {
-    "id": "5.1.1.1",
-    "group": "5",
-    "title": "霓虹灯留言",
-    "summary": "CSS text-shadow 模拟发光霓虹字。",
-    "tags": [
-      "independent",
-      "visual"
-    ],
-    "raw": "* **5.1.1.1 霓虹灯留言**: 用 CSS text-shadow 模拟真实霓虹灯。"
   },
   {
     "id": "5.1.1.2",
@@ -629,6 +667,39 @@ export const PRESENTATION_FORMATS = [
     "raw": "* **6.2.1.1 心跳回忆 GS 模式**：回忆相簿、多重结局、Adv Event。"
   },
   {
+    "id": "6.2.1.1.a",
+    "group": "6",
+    "title": "心跳回忆GS·回忆相簿",
+    "summary": "以缩图形式展示已解锁 CG，标注标题和日期；选择 CG 后触发共同观看与感想。",
+    "tags": [
+      "canon",
+      "game"
+    ],
+    "raw": "* **6.2.1.1.a 回忆相簿**: 相簿浏览（以缩图形式展示已解锁 CG，标有标题和日期）、共同回忆（选择一张 CG 后触发特殊场景，{{char}} 与 {{user}} 一起观看并发表感想）。"
+  },
+  {
+    "id": "6.2.1.1.b",
+    "group": "6",
+    "title": "心跳回忆GS·多重结局系统",
+    "summary": "以结局报告形式展示多重结局、条件达成、评价与关系归宿。",
+    "tags": [
+      "canon",
+      "game"
+    ],
+    "raw": "* **6.2.1.1.b 多重结局系统**: 以结局报告形式展示多重结局、条件达成、评价与关系归宿。"
+  },
+  {
+    "id": "6.2.1.1.c",
+    "group": "6",
+    "title": "心跳回忆GS·Adv Event",
+    "summary": "针对当前剧情，用 char 第一人称补完幕后准备、当时心境或事后回味。",
+    "tags": [
+      "canon",
+      "game"
+    ],
+    "raw": "* **6.2.1.1.c Adv Event**: 针对当前剧情，以 {{char}} 第一人称视角进行心理补完，涵盖幕后准备、当时心境或事后回味。"
+  },
+  {
     "id": "6.2.7",
     "group": "6",
     "title": "模拟人生",
@@ -638,6 +709,28 @@ export const PRESENTATION_FORMATS = [
       "game"
     ],
     "raw": "* **6.2.7 模拟人生**: 需求栏、Buff/Debuff、心愿面板、关系状态弹窗。"
+  },
+  {
+    "id": "6.2.7.a",
+    "group": "6",
+    "title": "模拟人生·需求/Buff/心愿面板",
+    "summary": "模仿模拟人生需求栏、Buff/Debuff、心愿面板与关系状态弹窗。",
+    "tags": [
+      "independent",
+      "game"
+    ],
+    "raw": "* **6.2.7.a 需求/Buff/心愿面板**: 模仿《模拟人生》的需求栏、Buff/Debuff、心愿面板、关系状态弹窗等系统提示。"
+  },
+  {
+    "id": "6.2.7.b",
+    "group": "6",
+    "title": "模拟人生·关系树",
+    "summary": "用树形图或网状图展示角色关系，每个节点附头像描述、属性标签与关系备注。",
+    "tags": [
+      "independent",
+      "game"
+    ],
+    "raw": "* **6.2.7.b 关系树**: 模仿《模拟人生》游戏的家族关系界面。用树形图或网状图展示所有角色之间的关系，每个角色节点附带头像描述、关键属性标签和一句话关系备注。"
   },
   {
     "id": "6.3.1",
@@ -706,6 +799,30 @@ export const PRESENTATION_FORMATS = [
     "raw": "* **6.5.4 问卷 / 测验**：恋爱语言测试、依恋类型测试、人格测试等。"
   },
   {
+    "id": "6.5.4.2",
+    "group": "6",
+    "title": "NSFW/SFW 访谈问卷",
+    "summary": "包含尺度递进问题的访谈或问卷，从日常到暧昧再到露骨；可单方回答或双方对照。",
+    "tags": [
+      "independent",
+      "interactive",
+      "adult"
+    ],
+    "raw": "* **6.5.4.2 NSFW/SFW 访谈问卷 (Intimate Q&A)**: 生成一份包含尺度递进问题的访谈/问卷（从日常→暧昧→露骨）。可以是单方面回答，也可以是双方对照回答。格式可模仿杂志专访或网络匿名问卷。"
+  },
+  {
+    "id": "6.5.4.3",
+    "group": "6",
+    "title": "初印象 vs 现印象表格",
+    "summary": "双栏对比初次相遇时的初始印象与经历剧情后的当前真实印象。",
+    "tags": [
+      "canon",
+      "interactive",
+      "analysis"
+    ],
+    "raw": "* **6.5.4.3 初印象 vs 现印象表格 (First Impression vs Now)**: 生成一个简洁的双栏对比表格，左栏为对对方的“初始印象”（基于初次相遇时的判断），右栏为经历剧情后“当前的真实印象”。"
+  },
+  {
     "id": "6.5.5",
     "group": "6",
     "title": "随机抽取",
@@ -726,6 +843,18 @@ export const PRESENTATION_FORMATS = [
       "interactive"
     ],
     "raw": "* **Bingo卡**: 生成一张 3x3 或 4x4 的不限主题 Bingo 卡。"
+  },
+  {
+    "id": "11.2.1",
+    "group": "11",
+    "title": "九宫格/十六宫格相册",
+    "summary": "以 CSS Grid 构建 3x3 或 4x4 网格，每格是独立 details；展开前显示日期/Emoji/关键词，展开后显示事件描述。",
+    "tags": [
+      "canon",
+      "interactive",
+      "visual"
+    ],
+    "raw": "* **11.2.1 九宫格/十六宫格相册 (Memory Grid)**: 以 CSS Grid 构建一个 3x3 或 4x4 的网格。每一格都是一个独立的 <details> 标签；展开前仅显示日期、Emoji 或模糊关键词，展开后弹出对应事件的详细文字描述（或图片描述占位符），记录两人共同经历的某个瞬间。整体类似需要手动解锁的“回忆拼图”。"
   },
   {
     "id": "7.1.2",

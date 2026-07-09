@@ -18,7 +18,7 @@ export async function rabbitHoleGenerateInterceptor(_chat, _contextSize, _abort,
     const skipQuiet = settings.skipQuiet && type === 'quiet';
     const skipImpersonate = settings.skipImpersonate && type === 'impersonate';
 
-    if (!settings.enabled || settings.mode === 'off' || skipQuiet || skipImpersonate) {
+    if (!settings.enabled || !settings.autoRabbitHoleInjection || settings.mode === 'off' || skipQuiet || skipImpersonate) {
         clearRabbitHolePrompt();
         return;
     }

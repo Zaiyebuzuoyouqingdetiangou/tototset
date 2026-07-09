@@ -16,3 +16,14 @@
     margin-top: 10px;
 }
 .rabbit-hole-toto-watermark{margin-left:8px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.45;border:1px solid var(--SmartThemeBorderColor);border-radius:999px;padding:1px 6px;vertical-align:middle;}
+
+toto[data-rabbit-hole="true"] details {
+    display: block;
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+toto[data-rabbit-hole="true"] summary {
+    cursor: pointer;
+    box-sizing: border-box;
+}

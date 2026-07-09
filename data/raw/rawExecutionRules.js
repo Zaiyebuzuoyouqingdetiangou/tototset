@@ -6,7 +6,7 @@ export const RAW_EXECUTION_RULES = String.raw`
 
 执行边界:
   enforcement_level: "mandatory"
-  trigger: "主回复完成后，回复最后必须追加完整的 <!-- TOTO_START --> 与 <!-- TOTO_END --> 包裹的 <details> 小剧场"
+  trigger: "主回复完成后，回复最后必须追加完整 <toto data-rabbit-hole="true" style="display:block;"> 包裹的 <details> 小剧场"
   summary: "标题写入 <summary>，格式为【兔子洞：本次小剧场标题】"
   narrative_boundary:
     - "不得以任何形式干预或改写主线叙事内容"
@@ -22,14 +22,14 @@ export const RAW_EXECUTION_RULES = String.raw`
 
 输出结构:
   enforcement_level: "mandatory"
-  wrapper: "<!-- TOTO_START --><details>...</details><!-- TOTO_END -->"
+  wrapper: "<toto data-rabbit-hole="true" style="display:block;"><details>...</details></toto>"
   rule:
-    - "小剧场必须包裹在 <!-- TOTO_START --> 与 <!-- TOTO_END --> 注释边界之间；边界内部必须使用一个完整 <details> 折叠模块，并在 <summary> 中显示标题"
-    - "TOTO_START/TOTO_END 只作为插件与正则识别边界，不得作为可见标题、标签、栏目名、水印或 UI 元素"
+    - "小剧场最外层必须使用 <toto data-rabbit-hole="true" style="display:block;"> 作为插件识别边界，内部再使用 <details> 折叠模块，并在 <summary> 中显示标题"
+    - "<toto> 只作为插件与正则识别边界，不得作为可见标题、标签、栏目名、水印或 UI 元素"
     - "内部 HTML 结构、版式、色彩、层级、视觉锚点必须根据本轮展现形式重新设计"
     - "不提供固定 HTML 模板；任何示例不得固化为固定卡片模板"
-    - "最终输出为可直接渲染的 HTML 压缩代码，不输出代码块，不解释规则"
-    - "小剧场边界必须完整：以 <!-- TOTO_START --> 开始，以 <!-- TOTO_END --> 结束；中间必须且只能包含一个完整 <details> 折叠模块，禁止遗漏 <summary>、</details> 或结束边界；不得在 <!-- TOTO_END --> 后追加任何可见内容"
+    - "最终输出为可直接渲染的紧凑 HTML，不输出代码块，不解释规则"
+    - "小剧场最外层必须完整包裹在 <toto data-rabbit-hole="true" style="display:block;"> 与 </toto> 之间，禁止遗漏闭合标签；不得在 </toto> 后追加任何可见内容"
 
 去模板化冷却:
   enforcement_level: "mandatory"
@@ -52,7 +52,7 @@ export const RAW_EXECUTION_RULES = String.raw`
     - "建立清晰字重层级，段落需具备合适 line-height 与 margin，避免均等密度长段堆叠"
     - "采用高对比度文本与语义化色彩，背景色需服务本轮氛围"
     - "根据氛围选择衬线或无衬线字体，允许用字号、字重、字距、留白形成节奏"
-    - "严禁单一套用黑底霓虹、紫蓝渐变、灰蓝玻璃拟态、多层卡片或同一种系统面板"
+    - "严禁单一套用黑底发光、紫蓝渐变、灰蓝玻璃拟态、多层卡片或同一种系统面板"
     - "若使用图片，必须使用真实公共 URL，并添加 max-width:100%;height:auto;display:block"
 
 复杂度硬指标:
