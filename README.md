@@ -1,9 +1,48 @@
-# Rabbit Hole Theater TEST v0.31.23-test
+# 兔子洞小剧场 / Rabbit Hole Theater
 
-Test package for the separate test repo.
+Toto v0.31.21
 
-- Full mode is changed to a compact aesthetic-core prompt for testing.
-- Disabled switches do not enter the prompt.
-- Recent history uses actual generated rabbit holes only.
-- Real CSS background scanner and color consistency guard are enabled.
-- Selected regional theme entries are removed.
+## v0.31.21 更新
+
+- 调整设置页顺序：`代码块急救模式` 移到 `不发送小剧场正则` 上方，避免放在最底部看不到。
+- `代码块急救模式` 继续默认关闭；只有兔子洞变成代码块时临时开启，查看渲染效果后请关闭。
+- 急救模式关闭时严格不干预输出；开启时才扫描/修复当前聊天区的代码块兔子洞。
+- 急救模式只负责解除 Markdown 代码块、pre/code 外壳、语法高亮 class 与 HTML 注释，恢复 HTML 渲染；不主动生成背景，不统一 UI，保留原 HTML 的 style/background/color。
+- `跳过 quiet 后台生成`、`跳过 impersonate 生成`、`控制台调试日志` 不再显示在普通设置区。前两项默认保持开启，调试日志默认关闭。
+- `兔子洞自动注入` 默认开启，开启后每轮生成前自动追加兔子洞规则。
+- 保留 0.31.18 的严格急救开关逻辑，并保留 0.31.14 系列的核心兔子洞规则。
+
+## 推荐设置
+
+- 兔子洞自动注入：开启
+- 代码块急救模式：平时关闭，只在兔子洞显示成代码块时临时开启
+- 抽取模式：主题元素 + 展现形式（经典模式）
+- 发散孵化模式：可开启
+- UI 自查优化 / 丰富版式：开启
+- 10轮冷却：开启
+
+## 不发送小剧场正则
+
+推荐正则：
+
+```regex
+/```(?:html|xml|javascript|js|css)?\s*<toto[^>]*>[\s\S]*?<\/toto>\s*```|<toto[^>]*>[\s\S]*?<\/toto>\s*/gi
+```
+
+推荐设置：替换留空／勾选 AI输出／勾选 仅格式提示词。
+
+## 安装
+
+解压后覆盖 GitHub 仓库根目录，保持以下结构：
+
+```text
+Extension-RabbitHole/
+  data/
+  src/
+  index.js
+  manifest.json
+  style.css
+  README.md
+```
+
+不要把整个外层文件夹再套进仓库里。
