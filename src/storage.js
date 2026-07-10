@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'rabbit_hole_theater:last_combo:v8';
-const PENDING_KEY = 'rabbit_hole_theater:pending_combo:v8';
+const STORAGE_KEY = 'rabbit_hole_theater:last_combo:v11';
+const PENDING_KEY = 'rabbit_hole_theater:pending_combo:v11';
 const MAX_STORED = 20;
 
 function readHistory() {
@@ -59,6 +59,27 @@ export function getRecentIds(limit = 10) {
     };
 }
 
+
+export function getRecentRiskFlags(limit = 3) {
+    const history = getComboHistory(limit);
+    const flags = [];
+    for (const item of history) {
+        if (Array.isArray(item?.riskFlags)) flags.push(...item.riskFlags);
+    }
+    return [...new Set(flags)];
+}
+
+export function getRecentRiskFlagCounts(limit = 3) {
+    const history = getComboHistory(limit);
+    const counts = {};
+    for (const item of history) {
+        for (const flag of item?.riskFlags || []) {
+            counts[flag] = (counts[flag] || 0) + 1;
+        }
+    }
+    return counts;
+}
+
 export function setPendingCombo(combo) {
     try {
         if (!combo) return;
@@ -69,7 +90,7 @@ export function setPendingCombo(combo) {
     }
 }
 
-export function commitPendingCombo(visualSignature = '', visualSkeleton = '') {
+export function commitPendingCombo(visualSignature = '', visualSkeleton = '', riskFlags = []) {
     try {
         const raw = localStorage.getItem(PENDING_KEY);
         if (!raw) return;
@@ -83,6 +104,7 @@ export function commitPendingCombo(visualSignature = '', visualSkeleton = '') {
         if (last?.signature === sig && now - Number(last?.ts || 0) < 120000) {
             if (visualSignature) last.visualSignature = String(visualSignature).slice(0, 280);
             if (visualSkeleton) last.visualSkeleton = String(visualSkeleton).slice(0, 360);
+            if (Array.isArray(riskFlags) && riskFlags.length) last.riskFlags = [...new Set(riskFlags)].slice(0, 8);
             last.visualSignatureTs = now;
             localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_STORED)));
             localStorage.removeItem(PENDING_KEY);
@@ -95,7 +117,8 @@ export function commitPendingCombo(visualSignature = '', visualSkeleton = '') {
             ts: now,
             visualSignature: visualSignature ? String(visualSignature).slice(0, 280) : pending.visualSignature,
             visualSkeleton: visualSkeleton ? String(visualSkeleton).slice(0, 360) : pending.visualSkeleton,
-            visualSignatureTs: visualSignature || visualSkeleton ? now : undefined,
+            riskFlags: Array.isArray(riskFlags) ? [...new Set(riskFlags)].slice(0, 8) : [],
+            visualSignatureTs: visualSignature || visualSkeleton || (Array.isArray(riskFlags) && riskFlags.length) ? now : undefined,
         });
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_STORED)));
         localStorage.removeItem(PENDING_KEY);
@@ -119,18 +142,25 @@ export function clearLastCombo() {
         localStorage.removeItem('rabbit_hole_theater:last_combo:v5');
         localStorage.removeItem('rabbit_hole_theater:last_combo:v6');
         localStorage.removeItem('rabbit_hole_theater:last_combo:v7');
+        localStorage.removeItem('rabbit_hole_theater:last_combo:v8');
+        localStorage.removeItem('rabbit_hole_theater:pending_combo:v8');
+        localStorage.removeItem('rabbit_hole_theater:last_combo:v9');
+        localStorage.removeItem('rabbit_hole_theater:pending_combo:v9');
+        localStorage.removeItem('rabbit_hole_theater:last_combo:v10');
+        localStorage.removeItem('rabbit_hole_theater:pending_combo:v10');
     } catch {}
 }
 
-export function updateLatestVisualSignature(visualSignature, visualSkeleton = '') {
-    if (!visualSignature && !visualSkeleton) return;
+export function updateLatestVisualSignature(visualSignature, visualSkeleton = '', riskFlags = []) {
+    if (!visualSignature && !visualSkeleton && !(Array.isArray(riskFlags) && riskFlags.length)) return;
     try {
-        commitPendingCombo(visualSignature, visualSkeleton);
+        commitPendingCombo(visualSignature, visualSkeleton, riskFlags);
         const history = readHistory();
         if (!history.length) return;
         const last = history[history.length - 1];
         if (visualSignature) last.visualSignature = String(visualSignature).slice(0, 280);
         if (visualSkeleton) last.visualSkeleton = String(visualSkeleton).slice(0, 360);
+        if (Array.isArray(riskFlags) && riskFlags.length) last.riskFlags = [...new Set(riskFlags)].slice(0, 8);
         last.visualSignatureTs = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_STORED)));
     } catch (error) {

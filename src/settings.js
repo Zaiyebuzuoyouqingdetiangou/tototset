@@ -20,9 +20,6 @@ export const defaultSettings = Object.freeze({
     // - 否则按独立兔子洞执行。
     mode: 'integrated',
 
-    // 注入模式：lite=轻量规则；full=完整规则。
-    injectionMode: 'lite',
-
     // 抽取模式：classic=主题元素+展现形式；format_only=仅展现形式。
     samplingMode: 'classic',
 
@@ -103,7 +100,6 @@ export function getSettings() {
     settings.cooldownRounds = Math.max(1, Number(settings.cooldownRounds) || defaultSettings.cooldownRounds);
     if (settings.autoRabbitHoleInjection === undefined) settings.autoRabbitHoleInjection = settings.enabled !== false;
     if (settings.codeBlockRescueMode === undefined) settings.codeBlockRescueMode = defaultSettings.codeBlockRescueMode;
-    if (!['lite', 'full'].includes(settings.injectionMode)) settings.injectionMode = defaultSettings.injectionMode;
     if (!['classic', 'format_only'].includes(settings.samplingMode)) settings.samplingMode = defaultSettings.samplingMode;
     settings.depth = Number(settings.depth) || 0;
     return settings;

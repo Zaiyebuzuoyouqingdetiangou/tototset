@@ -16,23 +16,12 @@ export function initRabbitHoleUI() {
 <div id="rabbit_hole_theater_settings" class="rabbit-hole-settings">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>兔子洞小剧场 / Rabbit Hole Theater</b><span class="rabbit-hole-toto-watermark">Toto v0.31.21</span>
+      <b>兔子洞小剧场 / Rabbit Hole Theater</b><span class="rabbit-hole-toto-watermark">Toto v0.31.29</span>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
       <label class="checkbox_label"><input id="rh_enabled" type="checkbox"> 兔子洞自动注入</label>
       <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后每轮自动追加兔子洞规则。</div>
-
-      <label for="rh_injection_mode" class="flex-container alignitemscenter" style="gap:8px;flex-wrap:wrap;margin:8px 0;">
-        <span>兔子洞注入模式</span>
-        <select id="rh_injection_mode" class="text_pole" style="max-width:260px;">
-          <option value="lite">轻量规则模式</option>
-          <option value="full">完整规则模式</option>
-        </select>
-      </label>
-      <div class="rabbit-hole-subnote" style="margin:-4px 0 8px 0;opacity:.72;font-size:12px;line-height:1.45;">轻量模式更省 token、重点更集中；完整模式保留更详细规则。</div>
-
-      <label class="checkbox_label"><input id="rh_user_directive" type="checkbox"> 用户指令优先（正文/兔子洞点播）</label>
 
       <label for="rh_sampling_mode" class="flex-container alignitemscenter" style="gap:8px;flex-wrap:wrap;margin:8px 0;">
         <span>抽取模式</span>
@@ -47,6 +36,8 @@ export function initRabbitHoleUI() {
 
       <label class="checkbox_label"><input id="rh_force_visual_scenery" type="checkbox"> 动态渐变模式</label>
       <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后允许生成纯 CSS 风景与流动渐变效果。</div>
+
+      <label class="checkbox_label"><input id="rh_user_directive" type="checkbox"> 用户指令优先（正文/兔子洞点播）</label>
 
       <label class="checkbox_label"><input id="rh_ui_audit" type="checkbox"> UI 自查优化 / 丰富版式</label>
       <label class="checkbox_label"><input id="rh_avoid_repeat" type="checkbox"> 10轮冷却：避免重复主题/展现形式/近似视觉观感</label>
@@ -76,7 +67,6 @@ export function initRabbitHoleUI() {
 
     checked('#rh_enabled', settings.autoRabbitHoleInjection !== false && settings.enabled !== false);
     checked('#rh_codeblock_rescue', settings.codeBlockRescueMode);
-    $('#rh_injection_mode').val(settings.injectionMode || 'lite');
     $('#rh_sampling_mode').val(settings.samplingMode || 'classic');
     checked('#rh_user_directive', settings.userDirectivePriority);
     checked('#rh_creative_expansion', settings.creativeExpansionMode);
@@ -96,7 +86,6 @@ export function initRabbitHoleUI() {
             toastr?.success?.('已关闭代码块急救模式：后续兔子洞将恢复自由渲染。');
         }
     });
-    $('#rh_injection_mode').on('change', e => updateSettings({ injectionMode: e.target.value }));
     $('#rh_sampling_mode').on('change', e => updateSettings({ samplingMode: e.target.value }));
     $('#rh_user_directive').on('change', e => updateSettings({ userDirectivePriority: e.target.checked }));
     $('#rh_creative_expansion').on('change', e => updateSettings({ creativeExpansionMode: e.target.checked }));

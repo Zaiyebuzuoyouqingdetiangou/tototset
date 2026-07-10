@@ -112,14 +112,241 @@ function analyzeDomStructure(html) {
 }
 
 
-function detectBaseColor(html) {
+function textLengthBucket(len) {
+    if (len < 60) return 'short';
+    if (len < 180) return 'medium';
+    return 'long';
+}
+
+function blockFeature(el) {
+    const style = (el?.getAttribute?.('style') || '').toLowerCase();
+    const text = (el?.textContent || '').replace(/\s+/g, '').trim();
+    return {
+        tag: el?.tagName || '',
+        hasBg: /background(?:-color)?\s*:/.test(style),
+        hasBorder: /border\s*:/.test(style) || /border-left\s*:/.test(style),
+        hasRadius: /border-radius\s*:/.test(style),
+        hasShadow: /box-shadow\s*:/.test(style),
+        hasPadding: /padding\s*:/.test(style),
+        hasHeading: !!el?.querySelector?.('h1,h2,h3,h4,strong,b'),
+        childBucket: Math.min(4, el?.children?.length || 0),
+        textBucket: textLengthBucket(text.length),
+    };
+}
+
+function featureSimilarity(a, b) {
+    const keys = ['tag', 'hasBg', 'hasBorder', 'hasRadius', 'hasShadow', 'hasPadding', 'hasHeading', 'childBucket', 'textBucket'];
+    let same = 0;
+    for (const key of keys) {
+        if (a?.[key] === b?.[key]) same += 1;
+    }
+    return same / keys.length;
+}
+
+function getBlockCandidates(root) {
+    if (!root?.querySelectorAll) return [];
+    return [...root.querySelectorAll('div, section, article, li')]
+        .filter(el => {
+            const text = (el.textContent || '').replace(/\s+/g, '').trim();
+            if (text.length < 24) return false;
+            const style = (el.getAttribute('style') || '').toLowerCase();
+            const hasBoxSignal = /border\s*:|border-left\s*:|border-radius\s*:|background(?:-color)?\s*:|box-shadow\s*:|padding\s*:/.test(style);
+            return hasBoxSignal;
+        })
+        .slice(0, 80);
+}
+
+function detectSameBlockStack(root, html = '') {
+    const candidates = getBlockCandidates(root);
+    if (candidates.length < 3) return false;
+    const features = candidates.map(blockFeature);
+    let similarPairs = 0;
+    let totalPairs = 0;
+    for (let i = 0; i < features.length; i += 1) {
+        for (let j = i + 1; j < features.length; j += 1) {
+            totalPairs += 1;
+            if (featureSimilarity(features[i], features[j]) >= 0.72) similarPairs += 1;
+        }
+    }
+    const similarRatio = totalPairs ? similarPairs / totalPairs : 0;
+    const htmlText = String(html || '').toLowerCase();
+    const verticalStackSignal = /flex-direction\s*:\s*column|gap\s*:|margin-bottom\s*:|<h[1-4]\b/i.test(htmlText);
+    const repeatedBoxSignal = count(/border-radius\s*:/gi, htmlText) >= 3 || count(/border\s*:/gi, htmlText) >= 3 || count(/background(?:-color)?\s*:/gi, htmlText) >= 4;
+    return candidates.length >= 4 && repeatedBoxSignal && (verticalStackSignal || similarRatio >= 0.55) && similarRatio >= 0.38;
+}
+
+function candidateSimilarityRatio(candidates = []) {
+    if (!Array.isArray(candidates) || candidates.length < 2) return 0;
+    const features = candidates.map(blockFeature);
+    let similarPairs = 0;
+    let totalPairs = 0;
+    for (let i = 0; i < features.length; i += 1) {
+        for (let j = i + 1; j < features.length; j += 1) {
+            totalPairs += 1;
+            if (featureSimilarity(features[i], features[j]) >= 0.68) similarPairs += 1;
+        }
+    }
+    return totalPairs ? similarPairs / totalPairs : 0;
+}
+
+function detectSameGridCardRisk(root, html = '') {
     const text = String(html || '').toLowerCase();
-    const darkHits = count(/background(?:-color)?\s*:\s*(?:#(?:000|111|121212|1[0-9a-f]{5}|2[0-9a-f]{5})|black|rgba?\(\s*0\s*,\s*0\s*,\s*0|linear-gradient\([^;"']*(?:#000|#111|#1|black))/gi, text);
-    const lightHits = count(/background(?:-color)?\s*:\s*(?:#(?:fff|f[0-9a-f]{5}|e[0-9a-f]{5})|white|rgba?\(\s*255\s*,\s*255\s*,\s*255)/gi, text);
-    if (darkHits >= Math.max(2, lightHits + 1)) return '暗色高对比底盘';
-    if (lightHits >= Math.max(2, darkHits + 1)) return '浅色纸面/白底底盘';
-    if (/gradient|radial-gradient|conic-gradient|linear-gradient/i.test(html)) return '渐变/混合色底盘';
+    const gridSignal = /display\s*:\s*grid|grid-template|grid-template-columns|repeat\s*\(/i.test(text);
+    if (!gridSignal) return false;
+    const candidates = getBlockCandidates(root);
+    if (candidates.length < 4) return false;
+    const ratio = candidateSimilarityRatio(candidates);
+    const boxSignals = count(/border\s*:/gi, text) + count(/border-radius\s*:/gi, text) + count(/background(?:-color)?\s*:/gi, text);
+    return ratio >= 0.30 && boxSignals >= 8;
+}
+
+function detectCatalogPageRisk(root, html = '', plain = '') {
+    const text = `${html || ''}\n${plain || ''}`;
+    const catalogSignal = /图鉴|目录|标本|物件|编号|条目|清单|列表|收藏|catalog|index|specimen|item|collection/i.test(text);
+    if (!catalogSignal) return false;
+    const candidates = getBlockCandidates(root);
+    const gridSignal = /display\s*:\s*grid|grid-template|grid-template-columns|repeat\s*\(/i.test(String(html || ''));
+    return candidates.length >= 4 && (gridSignal || candidateSimilarityRatio(candidates) >= 0.30);
+}
+
+function detectVisualPromiseWithoutMechanism(html = '', plain = '') {
+    const text = `${html || ''}\n${plain || ''}`;
+    const promisesMotion = /运动|变化|推进|实时|动态|连续|滚动|轮播|闪烁|流动|播放|抽取中|倒计时|漂浮|旋转|震动|呼吸|脉冲|弹幕/i.test(text);
+    if (!promisesMotion) return false;
+    const hasMechanism = /animation\s*:|@keyframes|transition\s*:|transform\s*:|<svg\b|<animate\b|<marquee\b|stroke-dasharray|offset-path/i.test(String(html || ''));
+    return !hasMechanism;
+}
+
+function detectRiskFlags({ root, html, plain, dom, repeated, spatialSignalCount }) {
+    const flags = [];
+    const sameBlockStack = detectSameBlockStack(root, html);
+    const sameGridCard = detectSameGridCardRisk(root, html);
+    const catalogPage = detectCatalogPageRisk(root, html, plain);
+
+    if (sameBlockStack) flags.push('same_block_stack');
+    if (sameGridCard) flags.push('same_grid_card_risk');
+    if (catalogPage) flags.push('catalog_page_risk');
+
+    if (sameBlockStack || sameGridCard || catalogPage || (dom?.maxSimilarRun || 0) >= 3 || (repeated?.maxRepeat || 0) >= 4) flags.push('info_page_degrade');
+    if (spatialSignalCount < 2 && String(plain || '').length > 520 && (sameBlockStack || sameGridCard || catalogPage || (repeated?.maxRepeat || 0) >= 3)) flags.push('weak_media_body');
+    if (detectVisualPromiseWithoutMechanism(html, plain)) flags.push('visual_promise_unfulfilled');
+    return [...new Set(flags)];
+}
+
+
+
+function expandHexColor(hex) {
+    const raw = String(hex || '').replace('#', '').trim();
+    if (/^[0-9a-f]{3}$/i.test(raw)) {
+        return raw.split('').map(x => x + x).join('');
+    }
+    if (/^[0-9a-f]{6}$/i.test(raw)) return raw;
+    return '';
+}
+
+function luminanceFromRgb(r, g, b) {
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+function colorValueLuminance(value) {
+    const v = String(value || '').toLowerCase();
+    if (/\bblack\b/.test(v)) return 0;
+    if (/\bwhite\b/.test(v)) return 255;
+    const rgba = v.match(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*([0-9.]+))?\s*\)/);
+    if (rgba) {
+        const alpha = rgba[4] === undefined ? 1 : Number(rgba[4]);
+        if (!Number.isNaN(alpha) && alpha < 0.25) return null;
+        return luminanceFromRgb(Number(rgba[1]), Number(rgba[2]), Number(rgba[3]));
+    }
+    const hexes = [...v.matchAll(/#([0-9a-f]{3}|[0-9a-f]{6})\b/gi)]
+        .map(m => expandHexColor(m[1]))
+        .filter(Boolean);
+    if (hexes.length) {
+        const values = hexes.map(hex => {
+            const r = parseInt(hex.slice(0, 2), 16);
+            const g = parseInt(hex.slice(2, 4), 16);
+            const b = parseInt(hex.slice(4, 6), 16);
+            return luminanceFromRgb(r, g, b);
+        });
+        // For gradients, average the first two stops; for flat color, use the first.
+        const sample = values.slice(0, Math.min(2, values.length));
+        return sample.reduce((a, b) => a + b, 0) / sample.length;
+    }
+    return null;
+}
+
+function extractBackgroundValues(html) {
+    const values = [];
+    const input = String(html || '');
+    const re = /background(?:-color)?\s*:\s*([^;"']+)/gi;
+    let match;
+    while ((match = re.exec(input))) {
+        const value = String(match[1] || '').trim();
+        if (value) values.push(value);
+    }
+    return values;
+}
+
+function detectBaseColor(html) {
+    const values = extractBackgroundValues(html);
+    const luminances = values.map(colorValueLuminance).filter(v => typeof v === 'number' && !Number.isNaN(v));
+
+    // The first explicit background usually belongs to the main container. Give it priority
+    // so a dark outer shell cannot be mislabelled as white because of light inner cards.
+    if (luminances.length) {
+        const first = luminances[0];
+        if (first < 90) return '暗色高对比底盘';
+        if (first > 190) return '浅色纸面/白底底盘';
+        const darkCount = luminances.filter(v => v < 90).length;
+        const lightCount = luminances.filter(v => v > 190).length;
+        if (darkCount > lightCount) return '暗色高对比底盘';
+        if (lightCount > darkCount) return '浅色纸面/白底底盘';
+    }
+
+    if (/radial-gradient|conic-gradient|linear-gradient/i.test(html)) return '渐变/混合色底盘';
     return '中性或混合底盘';
+}
+
+function detectContrastFamily(html) {
+    const values = extractBackgroundValues(html);
+    const luminances = values.map(colorValueLuminance).filter(v => typeof v === 'number' && !Number.isNaN(v));
+    if (!luminances.length) return 'contrast: mixed_or_unspecified';
+    const first = luminances[0];
+    if (first < 90) return 'contrast: dark_weighted';
+    if (first > 190) return 'contrast: light_weighted';
+    return 'contrast: mid_tone_or_mixed';
+}
+
+function detectSurfaceFamily(html, plain = '') {
+    const text = `${html || ''}\n${plain || ''}`.toLowerCase();
+    const base = detectBaseColor(html);
+    if (/纸|信笺|便签|票据|菜单|说明书|羊皮纸|报纸|签文|paper|newspaper|ticket|menu|manual|letter/i.test(text)) return 'surface: paper_or_document_surface';
+    if (/玻璃|磨砂|透明|backdrop-filter|blur\(|rgba\([^)]*0\.[0-9]/i.test(text)) return 'surface: glass_or_translucent_surface';
+    if (/金属|铁|铜|钢|铝|metal|chrome|silver|bronze/i.test(text)) return 'surface: metallic_or_hard_surface';
+    if (/木|布|织物|陶瓷|皮革|石|wood|fabric|ceramic|leather|stone/i.test(text)) return 'surface: physical_material_surface';
+    if (/radial-gradient|conic-gradient|linear-gradient|repeating-gradient/i.test(text)) return 'surface: gradient_or_light_surface';
+    if (/暗色|黑|夜|neon|霓虹|glow|发光|console|screen|屏幕|控制台|监控/i.test(text) || base.includes('暗色')) return 'surface: digital_dark_surface';
+    if (base.includes('浅色')) return 'surface: light_plain_surface';
+    return 'surface: mixed_or_unspecified_surface';
+}
+
+function detectContourFamily(html, dom) {
+    const text = String(html || '');
+    if (/clip-path\s*:|polygon\(|path\(|<svg\b|mask\s*:/i.test(text)) return 'contour: cutout_or_irregular_shape';
+    if (/border-radius\s*:\s*50%|border-radius\s*:\s*999/i.test(text)) return 'contour: circular_or_pill_shape';
+    if (count(/border-radius\s*:/gi, text) >= 4 && count(/<div\b/gi, text) >= 8) return 'contour: rounded_panel_cluster';
+    if ((dom?.maxSimilarRun || 0) >= 2) return 'contour: repeated_rectangular_blocks';
+    if (/position\s*:\s*absolute|transform\s*:/i.test(text)) return 'contour: layered_freeform_overlay';
+    return 'contour: simple_or_mixed_outline';
+}
+
+function detectSpaceFamily(html, spatialSignalCount) {
+    const text = String(html || '');
+    if (spatialSignalCount >= 4) return 'space: layered_depth_or_spatial_scene';
+    if (/display\s*:\s*grid|grid-template/i.test(text)) return 'space: grid_plane';
+    if (/display\s*:\s*flex/i.test(text)) return 'space: flex_plane';
+    if (spatialSignalCount >= 2) return 'space: shallow_layered_surface';
+    return 'space: flat_content_surface';
 }
 
 function detectLayout(html, dom, spatialSignalCount) {
@@ -171,10 +398,12 @@ function detectMood(html, plain) {
 
 function buildVisualSkeleton(html, plain, metrics) {
     return [
-        `base_color: ${detectBaseColor(html)}`,
-        `layout: ${detectLayout(html, metrics.dom, metrics.spatialSignalCount)}`,
-        `reading_path: ${detectReadingPath(html, metrics.spatialSignalCount)}`,
-        `info_unit: ${detectInfoUnit(html, metrics.dom, metrics.repeated)}`,
+        `surface_family: ${detectSurfaceFamily(html, plain)}`,
+        `contrast_family: ${detectContrastFamily(html)}`,
+        `contour_family: ${detectContourFamily(html, metrics.dom)}`,
+        `reading_family: ${detectReadingPath(html, metrics.spatialSignalCount)}`,
+        `unit_family: ${detectInfoUnit(html, metrics.dom, metrics.repeated)}`,
+        `space_family: ${detectSpaceFamily(html, metrics.spatialSignalCount)}`,
         `mood: ${detectMood(html, plain)}`,
     ].join('；');
 }
@@ -194,6 +423,7 @@ export function scanRabbitHoleHtml(messageHtml) {
     const divCount = count(/<div\b/gi, html);
     const repeated = extractStyleFingerprints(html);
     const dom = analyzeDomStructure(html);
+    const root = parseToto(html);
     const textDensity = plain.length > 900 && tagCount < 65 ? '文本密度过高' : plain.length > 520 ? '文本密度中高' : '文本密度适中';
 
     const spatialSignalCount = count(/position\s*:\s*absolute|grid-area\s*:|grid-template|display\s*:\s*grid|transform\s*:|clip-path\s*:|mask\s*:|z-index\s*:|<svg\b|<path\b|radial-gradient|conic-gradient|repeating-gradient|aspect-ratio/gi, html);
@@ -217,6 +447,13 @@ export function scanRabbitHoleHtml(messageHtml) {
     if (count(/<!--/g, html) > 0) structural.push('HTML注释残留');
     if (/<pre\b|<code\b|```/i.test(html)) structural.push('代码块风险');
     if (detectGlobalCssRisk(html)) structural.push('全局CSS污染风险');
+    const riskFlags = detectRiskFlags({ root, html, plain, dom, repeated, spatialSignalCount });
+    if (riskFlags.includes('same_block_stack')) structural.push('同构信息块堆叠风险');
+    if (riskFlags.includes('same_grid_card_risk')) structural.push('同构网格信息块风险');
+    if (riskFlags.includes('catalog_page_risk')) structural.push('图鉴/目录式承载风险');
+    if (riskFlags.includes('info_page_degrade')) structural.push('信息页降级风险');
+    if (riskFlags.includes('weak_media_body')) structural.push('媒介本体偏弱风险');
+    if (riskFlags.includes('visual_promise_unfulfilled')) structural.push('视觉承诺未兑现风险');
     structural.push(...dom.summaryFlags);
 
     const mediaStrength = (/clip-path|mask|<svg\b|<path\b|position\s*:\s*absolute|transform\s*:|border-radius\s*:\s*50%|aspect-ratio|radial-gradient|conic-gradient/i.test(html) && tagCount >= 35)
@@ -226,7 +463,7 @@ export function scanRabbitHoleHtml(messageHtml) {
         .filter(Boolean)
         .join('；');
     const skeleton = buildVisualSkeleton(html, plain, { dom, repeated, spatialSignalCount });
-    return { signature: summary.slice(0, 280), skeleton: skeleton.slice(0, 360) };
+    return { signature: summary.slice(0, 280), skeleton: skeleton.slice(0, 360), riskFlags };
 }
 
 async function scanLatestAssistantMessage(mod) {
@@ -241,9 +478,10 @@ async function scanLatestAssistantMessage(mod) {
     const result = scanRabbitHoleHtml(message.mes);
     const signature = result?.signature || '';
     const skeleton = result?.skeleton || '';
-    if (signature || skeleton) {
-        updateLatestVisualSignature(signature, skeleton);
-        console.debug('[RabbitHole] visual signature:', signature, skeleton);
+    const riskFlags = Array.isArray(result?.riskFlags) ? result.riskFlags : [];
+    if (signature || skeleton || riskFlags.length) {
+        updateLatestVisualSignature(signature, skeleton, riskFlags);
+        console.debug('[RabbitHole] visual signature:', signature, skeleton, riskFlags);
     }
 }
 

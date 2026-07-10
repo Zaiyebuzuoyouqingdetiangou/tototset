@@ -15,7 +15,7 @@ import { USER_REQUEST_OVERRIDE_RULES } from '../data/raw/userRequestOverrideRule
 import { CREATIVE_EXPANSION_RULES } from '../data/raw/creativeExpansionRules.js';
 import { resolveThemeRaw, resolvePresentationRaw } from '../data/raw/rawSegmentLookup.js';
 import { pickCombination } from './picker.js';
-import { getComboHistory, getLastCombo } from './storage.js';
+import { getComboHistory, getLastCombo, getRecentRiskFlags, getRecentRiskFlagCounts } from './storage.js';
 
 const HARD_STARTUP_PROTOCOL = String.raw`
 强制启动增强协议:
@@ -280,13 +280,40 @@ function thinkingPipeline(settings) {
 function shortVisualAvoidance(combo, limit = 3) {
     const raw = formatRecentVisualSignatures(combo, limit);
     if (!raw || raw === '无记录或首次运行') {
-        return '暂无实际历史，本轮自由生成；但仍禁止退化为普通信息卡、状态栏、报告页或多块同构卡片。';
+        return '暂无实际历史，本轮自由生成；但仍不得退化为普通信息页或同构内容块堆叠。';
     }
     return raw
         .split('\n')
         .slice(0, limit)
         .map(line => line.replace(/；视觉签名：/g, '；避让特征：').slice(0, 260))
         .join('\n');
+}
+
+
+function recentRiskCorrection() {
+    const flags = getRecentRiskFlags(3);
+    const counts = getRecentRiskFlagCounts(3);
+    if (!flags.length) return '';
+    const lines = [];
+
+    if (flags.includes('same_block_stack') || flags.includes('same_grid_card_risk') || flags.includes('info_page_degrade')) {
+        lines.push('近期真实输出存在同构内容承载重复。本轮必须改变主要内容承载方式、阅读路径和空间结构，不得只换色、换标题或换边框复用近期视觉骨架。');
+    }
+
+    if (flags.includes('catalog_page_risk')) {
+        lines.push('近期真实输出存在相近内容承载骨架重复。本轮必须更换主要内容承载方式、阅读路径或空间组织，不得换皮延续近期页面骨架。');
+    }
+
+    if (flags.includes('weak_media_body')) {
+        lines.push('近期真实输出存在媒介本体偏弱。本轮必须让展现形式直接决定 DOM/CSS 轮廓、空间组织与文字寄生方式，不得把主要内容放回普通内容页。');
+    }
+
+    if (flags.includes('visual_promise_unfulfilled')) {
+        lines.push('近期真实输出存在视觉实现偏弱。本轮鼓励用 CSS/SVG/HTML 结构表现媒介本体、空间层级、材质质感或细微动态，避免只堆文字说明。');
+    }
+
+    if (!lines.length) return '';
+    return `\n真实视觉纠偏【由插件扫描实际 HTML/CSS 后触发，不是模板要求】:\n${lines.map(x => `  - "${x}"`).join('\n')}`;
 }
 
 function coreOutputProtocol() {
@@ -313,18 +340,27 @@ function compactCreativeRule(enabled) {
 
 function compactMediaRule() {
     return String.raw`
-媒介本体与 UI 要求:
+媒介本体与视觉完成度:
   - 展现形式必须决定 DOM/CSS 骨架、视觉轮廓、阅读路径和文字寄生方式，不能只写进标题。
-  - 兔子洞必须像独立完成的微型 HTML 媒介作品，不得退化成普通信息卡、报告页、档案页、状态栏、系统面板或多块同构卡片。
-  - 必须有明确视觉锚点、空间层级、专属媒介质感、文本长短错落、自适配布局与中文界面。
-  - 禁止仅靠换标题、颜色、图标、边框、阴影伪装新 UI。
+  - 兔子洞必须像完成度高的微型 HTML 媒介作品，而不是普通信息页、简单表单或文字块堆叠。
+  - 必须使用 Flexbox/Grid 或其他明确布局方式建立视觉秩序，并为主容器与关键子容器设置 box-sizing:border-box。
+  - 必须具备视觉锚点、空间层级、排版呼吸感与材质质感；鼓励使用 box-shadow、linear-gradient、filter、SVG 或轻量 CSS 动效。
+  - 风格必须由本轮展现形式与剧情氛围推导，不得复用单一范本，不得只靠换标题、颜色、边框或局部装饰伪装新 UI。
 `;
+}
+
+
+function visualColorTruthRule() {
+    return String.raw`
+视觉明暗一致性:
+  - 兔子洞对明暗、纸面、屏幕、材质等视觉描述必须与实际 CSS background/background-color 一致。
+  - 不得用文字声明替代真实 CSS；实际主容器是什么明暗和材质，就按真实 CSS 呈现。`;
 }
 
 function compactSafetyRule() {
     return String.raw`
-HTML 安全:
-  只使用可直接渲染的 HTML/CSS/SVG/details/summary；优先 inline style。禁止 script、iframe、object、embed、form、onclick/onload/onerror 等事件属性。长文本必须自适配屏幕宽度，防止溢出。`;
+HTML 直接渲染:
+  只输出可直接渲染的 HTML/CSS/SVG/details/summary，优先 inline style；禁止脚本、危险嵌入和事件属性；长文本需自适配屏幕宽度。`;
 }
 
 function buildLitePrompt({ combo, settings, selectedThemes, selectedFormats, visualSceneryMode, tarotRulesText, directive }) {
@@ -341,6 +377,7 @@ ${selectedFormats || '- 无'}
 `);
     chunks.push(compactCreativeRule(!!settings.creativeExpansionMode));
     chunks.push(compactMediaRule());
+    chunks.push(visualColorTruthRule());
     if (settings.userDirectivePriority && directive) {
         chunks.push(String.raw`
 用户点播优先:
@@ -349,12 +386,12 @@ ${selectedFormats || '- 无'}
     if (settings.uiAudit) {
         chunks.push(String.raw`
 UI 自查:
-  输出前检查：展现形式载体感、媒介语法、高级质感、空间层级、文字密度、阅读节奏、装饰契合度、是否像普通报告/卡片/状态栏。失败则重写。`);
+  输出前检查：展现形式载体感、媒介语法、高级质感、空间层级、文字密度、阅读节奏、装饰契合度、是否退化为普通信息页或同构内容块。失败则重写。`);
     }
     if (settings.avoidRepeat) {
         chunks.push(String.raw`
 近期视觉避让:
-${shortVisualAvoidance(combo, 3)}
+${shortVisualAvoidance(combo, 3)}${recentRiskCorrection()}
 `);
     }
     if (visualSceneryMode) {
@@ -372,7 +409,7 @@ ${shortVisualAvoidance(combo, 3)}
     return chunks.filter(Boolean).join('\n\n').trim();
 }
 
-function buildFullPrompt({ combo, settings, selectedThemes, selectedFormats, visualSceneryMode, tarotRulesText, tarotRequirement, uiReviewFocus, cooldownWindow, directive }) {
+function buildStandardPrompt({ combo, settings, selectedThemes, selectedFormats, visualSceneryMode, tarotRulesText, tarotRequirement, uiReviewFocus, cooldownWindow, directive }) {
     const chunks = [];
     chunks.push('<RabbitHoleTheaterAutoInjection>');
     chunks.push('你必须在本轮主回复完成后，额外输出一个【兔子洞】小剧场模块。此模块由 SillyTavern 第三方扩展自动注入，不需要用户在预设里放任何内容。');
@@ -384,6 +421,7 @@ function buildFullPrompt({ combo, settings, selectedThemes, selectedFormats, vis
     chunks.push(FORMAT_PRIORITY_RULES);
     chunks.push(MEDIA_SELF_JUDGMENT_RULES);
     chunks.push(MODULAR_DEGRADATION_RULES);
+    chunks.push(visualColorTruthRule());
     if (settings.hardChineseLock) chunks.push(RUNTIME_LANGUAGE_RULES);
     chunks.push(STATE_BAR_ISOLATION_RULES);
     if (settings.hardStartup) chunks.push(HARD_STARTUP_PROTOCOL);
@@ -412,7 +450,7 @@ function buildFullPrompt({ combo, settings, selectedThemes, selectedFormats, vis
     if (settings.avoidRepeat) {
         chunks.push(String.raw`
 最近视觉签名摘要【避让对象，不得模仿，不得复用其 UI 骨架；只来自已经实际生成成功的历史，不预抽未来轮次】:
-${shortVisualAvoidance(combo, 3)}
+${shortVisualAvoidance(combo, 3)}${recentRiskCorrection()}
 `);
         chunks.push(VISUAL_FAMILY_COOLDOWN_RULES);
     }
@@ -513,10 +551,10 @@ export function buildRabbitHolePrompt(settings, generationType = 'normal') {
     const tarotRequirement = tarotRulesText ? '如本轮使用塔罗牌图片，必须遵守已注入的【塔罗牌图片规则】计算图片地址。' : '本轮未注入塔罗图片规则；不要自行扩展塔罗图片编号规则。';
     const uiReviewFocus = formatUiReviewFocus(combo);
     const payload = { combo, settings, selectedThemes, selectedFormats, visualSceneryMode, tarotRulesText, tarotRequirement, uiReviewFocus, cooldownWindow, directive };
-    const prompt = settings.injectionMode === 'full' ? buildFullPrompt(payload) : buildLitePrompt(payload);
+    const prompt = buildLitePrompt(payload);
 
     if (settings.debug) {
-        console.debug('[RabbitHole] generationType:', generationType, 'mode:', settings.injectionMode || 'lite', 'combo:', combo, 'prompt chars:', prompt.length);
+        console.debug('[RabbitHole] generationType:', generationType, 'combo:', combo, 'prompt chars:', prompt.length);
     }
     return prompt;
 }
