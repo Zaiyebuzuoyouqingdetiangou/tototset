@@ -592,13 +592,13 @@ export const PRESENTATION_FORMATS = [
   {
     "id": "5.3.2.2",
     "group": "5",
-    "title": "黄大仙签文解读",
-    "summary": "庙街解签师傅口吻。",
+    "title": "古庙签文解读",
+    "summary": "旧式签筒解签人口吻。",
     "tags": [
       "independent",
       "mystic"
     ],
-    "raw": "* **5.3.2.2 黄大仙签文解读**：模棱两可、充满玄机的解签。"
+    "raw": "* **5.3.2.2 古庙签文解读**：模棱两可、充满玄机的解签。"
   },
   {
     "id": "5.3.2.3",
