@@ -3,18 +3,18 @@ export const PRESENTATION_FORMATS = [
     "id": "10.1",
     "group": "10",
     "title": "可交互小剧场",
-    "summary": "嵌套 details/summary 点击推进。",
+    "summary": "通过点击、展开、滑动或切换推进，并真实改变可见层级、阅读路径或界面状态；必须使用无需 JS 的可点击结构。",
     "tags": [
       "independent",
       "interactive"
     ],
-    "raw": "* **10.1 可交互小剧场**：深度利用 <details> 和 <summary> 的嵌套折叠特性。"
+    "raw": "* **10.1 可交互小剧场**：制作需要 {{user}} 主动点击、展开、滑动或切换才能推进的互动型小剧场；交互必须真实改变可见层级、阅读路径或界面状态，不得只是普通折叠说明；优先使用原生可操作结构，禁止 JS、onclick 与需要脚本才能生效的按钮；装饰层不得遮挡可点击层。"
   },
   {
     "id": "10.2",
     "group": "10",
     "title": "可视化小剧场",
-    "summary": "CSS 图形、色块、排版为叙事载体。",
+    "summary": "CSS 图形、分层、光影、排版为叙事载体。",
     "tags": [
       "independent",
       "visual"
@@ -130,6 +130,19 @@ export const PRESENTATION_FORMATS = [
       "digital"
     ],
     "raw": "* **1.2.1 在线购物接口**：购物车/快递/外带订单/亲密付等。"
+  },
+
+  {
+    "id": "1.3.2.4.1",
+    "group": "1",
+    "title": "外语学习APP",
+    "summary": "语言学习软件界面、单词卡、例句、录音波形、错题本或打卡进度。",
+    "tags": [
+      "independent",
+      "digital",
+      "learning"
+    ],
+    "raw": "* **1.3.2.4.1 外语学习APP**：模仿语言学习软件界面，以单词卡、例句、录音波形、错题本或打卡进度等形式，呈现角色的口音、暗语、误会或亲密表达。若出现外语可见文字，必须立即补充自然简体中文释义，格式为外语 [中文释义]。"
   },
   {
     "id": "1.3.2.4.2",
@@ -592,13 +605,13 @@ export const PRESENTATION_FORMATS = [
   {
     "id": "5.3.2.2",
     "group": "5",
-    "title": "古庙签文解读",
-    "summary": "旧式签筒解签人口吻。",
+    "title": "黄大仙签文解读",
+    "summary": "庙街解签师傅口吻。",
     "tags": [
       "independent",
       "mystic"
     ],
-    "raw": "* **5.3.2.2 古庙签文解读**：模棱两可、充满玄机的解签。"
+    "raw": "* **5.3.2.2 黄大仙签文解读**：模棱两可、充满玄机的解签。"
   },
   {
     "id": "5.3.2.3",
@@ -1036,7 +1049,7 @@ export const PRESENTATION_FORMATS = [
     "id": "8.translation",
     "group": "8",
     "title": "直白翻译机",
-    "summary": "体面话与真实含义双栏并列。",
+    "summary": "体面话与真实含义并排对照。",
     "tags": [
       "independent",
       "meta"
