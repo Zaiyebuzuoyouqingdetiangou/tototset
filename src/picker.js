@@ -252,22 +252,22 @@ function extractAfterPatterns(message, patterns) {
 }
 
 function parseUserDirective(message) {
-    if (!message || !/(兔子洞|小剧场)/.test(message)) return null;
+    if (!message || !/(兔子镜|小剧场)/.test(message)) return null;
 
-    if (/((?:兔子洞|小剧场)\s*(关闭|关掉|不要|禁用|停止|off)|不要\s*(?:兔子洞|小剧场)|关闭\s*(?:兔子洞|小剧场)|本轮不(?:要|用)\s*(?:兔子洞|小剧场))/i.test(message)) {
-        return { disabled: true, reason: '用户正文指令关闭本轮兔子洞' };
+    if (/((?:兔子镜|小剧场)\s*(关闭|关掉|不要|禁用|停止|off)|不要\s*(?:兔子镜|小剧场)|关闭\s*(?:兔子镜|小剧场)|本轮不(?:要|用)\s*(?:兔子镜|小剧场))/i.test(message)) {
+        return { disabled: true, reason: '用户正文指令关闭本轮兔子镜' };
     }
 
     const themeTexts = extractAfterPatterns(message, [
-        '(?:兔子洞|小剧场)(?:主题|元素|题材|theme)\s*[:：]\s*([^\n。；;]+)',
+        '(?:兔子镜|小剧场)(?:主题|元素|题材|theme)\s*[:：]\s*([^\n。；;]+)',
     ]);
     const formatTexts = extractAfterPatterns(message, [
-        '(?:兔子洞|小剧场)(?:展现形式|展示形式|表现形式|格式|形式|format|ui|UI)\s*[:：]\s*([^\n。；;]+)',
+        '(?:兔子镜|小剧场)(?:展现形式|展示形式|表现形式|格式|形式|format|ui|UI)\s*[:：]\s*([^\n。；;]+)',
     ]);
     const generalTexts = extractAfterPatterns(message, [
-        '(?:兔子洞|小剧场)\s*[:：]\s*([^\n。；;]+)',
-        '(?:兔子洞|小剧场)\s*(?:想看|想要|来|要|指定|换成)\s*([^\n。；;]+)',
-        '(?:下一个|下次|这次|本轮)?\s*(?:兔子洞|小剧场)\s*(?:想看|想要|来|要|指定|换成)\s*([^\n。；;]+)',
+        '(?:兔子镜|小剧场)\s*[:：]\s*([^\n。；;]+)',
+        '(?:兔子镜|小剧场)\s*(?:想看|想要|来|要|指定|换成)\s*([^\n。；;]+)',
+        '(?:下一个|下次|这次|本轮)?\s*(?:兔子镜|小剧场)\s*(?:想看|想要|来|要|指定|换成)\s*([^\n。；;]+)',
     ]).filter(x => !/^(主题|元素|题材|展现形式|展示形式|表现形式|格式|形式)\s*[:：]/.test(x));
 
     const themeQueries = splitDirectiveText(themeTexts.join('、'));
@@ -288,7 +288,7 @@ function parseUserDirective(message) {
     for (const query of generalQueries) {
         const format = matchOne(PRESENTATION_FORMATS, query);
         const theme = matchOne(THEMATIC_CATEGORIES, query);
-        // 一般“兔子洞：xxx”里，像法甜剖面图/短信体更常是展现形式；两边都能匹配时都保留。
+        // 一般“兔子镜：xxx”里，像法甜剖面图/短信体更常是展现形式；两边都能匹配时都保留。
         if (format) formats.push(format);
         if (theme) themes.push(theme);
     }
@@ -301,7 +301,7 @@ function parseUserDirective(message) {
         disabled: false,
         themes: uniqueThemes,
         formats: uniqueFormats,
-        source: '最后一条用户消息中的兔子洞正文指令',
+        source: '最后一条用户消息中的兔子镜正文指令',
         raw: message,
     };
 }

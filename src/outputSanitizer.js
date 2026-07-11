@@ -78,9 +78,9 @@ function looksLikeCompleteHtmlBlock(text) {
     if (TOTO_BLOCK_SINGLE_RE.test(html)) return true;
     if (!/^<(?:div|section|article|details)\b[\s\S]*<\/(?:div|section|article|details)>\s*$/i.test(html)) return false;
 
-    // 只接管“像兔子洞 UI 作品”的整段 HTML，避免误伤普通聊天里的 HTML 教程代码。
+    // 只接管“像兔子镜 UI 作品”的整段 HTML，避免误伤普通聊天里的 HTML 教程代码。
     const htmlSignal = /\bstyle\s*=|display\s*:\s*(?:grid|flex|block)|box-sizing\s*:|max-width\s*:|linear-gradient\(|box-shadow\s*:|filter\s*:|border-radius\s*:/i.test(html);
-    const theaterSignal = /兔子洞|小剧场|互动区|海龟汤|剖面图|Layer|视觉|展现形式|summary|details/i.test(html);
+    const theaterSignal = /兔子镜|小剧场|互动区|海龟汤|剖面图|Layer|视觉|展现形式|summary|details/i.test(html);
     const enoughTags = (html.match(/<\/(?:div|p|span|h[1-6]|section|article)>/gi) || []).length >= 3;
     return htmlSignal && (theaterSignal || enoughTags);
 }
@@ -91,7 +91,7 @@ function wrapNakedHtmlAsToto(html) {
     if (/<details\b/i.test(body) && /<summary\b/i.test(body)) {
         return `<toto data-rabbit-hole="true" style="display:block;">${body}</toto>`;
     }
-    return `<toto data-rabbit-hole="true" style="display:block;"><details style="display:block;box-sizing:border-box;"><summary style="cursor:pointer;list-style:none;font-weight:700;margin:0 0 8px 0;">【兔子洞：小剧场】</summary>${body}</details></toto>`;
+    return `<toto data-rabbit-hole="true" style="display:block;"><details style="display:block;box-sizing:border-box;"><summary style="cursor:pointer;list-style:none;font-weight:700;margin:0 0 8px 0;">【兔子镜：小剧场】</summary>${body}</details></toto>`;
 }
 
 function cleanCodeFencePayload(payload) {
@@ -224,7 +224,7 @@ export function cleanRabbitHoleOutput(responseText = '') {
     // 2. 先处理已经有 <toto> 外壳的块：拆掉内部 ```html / <pre><code>，再压缩。
     text = text.replace(TOTO_BLOCK_RE, (block) => compactTotoBlock(unwrapCodeBlocksInsideToto(block)));
 
-    // 3. 再处理外层裸露的代码块：如果整块是兔子洞或裸 HTML，则补边界。
+    // 3. 再处理外层裸露的代码块：如果整块是兔子镜或裸 HTML，则补边界。
     text = text.replace(FENCED_BLOCK_RE, (match, payload) => {
         const cleaned = cleanCodeFencePayload(payload);
         return cleaned || match;
@@ -394,7 +394,7 @@ function isRabbitHoleDetails(details) {
     if (!details?.querySelector) return false;
     const summary = details.querySelector(':scope > summary') || details.querySelector('summary');
     const title = (summary?.textContent || '').replace(/\s+/g, ' ').trim();
-    return /^【兔子洞[:：]/.test(title) || /兔子洞/.test(title);
+    return /^【兔子镜[:：]/.test(title) || /兔子镜/.test(title);
 }
 
 function sanitizeRenderedRabbitHoleDetailsDom() {
@@ -406,7 +406,7 @@ function sanitizeRenderedRabbitHoleDetailsDom() {
     for (const details of detailsList) {
         if (!isInsideChatMessage(details)) continue;
 
-        // 以 summary 为锚点修复：标题已经被渲染成功时，说明外层兔子洞成立；
+        // 以 summary 为锚点修复：标题已经被渲染成功时，说明外层兔子镜成立；
         // 这时只要把 summary 后面被当成源码显示的 HTML 正文拆回真实 DOM。
         const candidates = [...details.querySelectorAll('pre, code, .hljs, .code_block, .code-block, .codeblock, [class*="codeblock"], [class*="code-block"], div, section, article')]
             .filter(node => node !== details && !node.closest('summary'))
@@ -462,7 +462,7 @@ function sanitizeCodeBlocksInChatDom() {
             const match = cleaned.match(TOTO_BLOCK_SINGLE_RE);
             replacement = match ? parseTotoFragment(match[0]) : null;
         } else if (looksLikeCompleteHtmlBlock(raw)) {
-            // 已经在兔子洞 details 里面时，只把代码块内容变成真实 HTML，避免再套一层小剧场。
+            // 已经在兔子镜 details 里面时，只把代码块内容变成真实 HTML，避免再套一层小剧场。
             replacement = insideRabbitHole
                 ? parseHtmlFragment(compactTotoBlock(raw))
                 : parseTotoFragment(wrapNakedHtmlAsToto(raw));

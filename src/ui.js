@@ -16,12 +16,12 @@ export function initRabbitHoleUI() {
 <div id="rabbit_hole_theater_settings" class="rabbit-hole-settings">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>兔子洞小剧场 / Rabbit Hole Theater</b><span class="rabbit-hole-toto-watermark">Toto v0.31.29</span>
+      <b>兔子镜小剧场 / Rabbit Mirror Theater</b><span class="rabbit-hole-toto-watermark">Toto v0.31.34</span>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
-      <label class="checkbox_label"><input id="rh_enabled" type="checkbox"> 兔子洞自动注入</label>
-      <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后每轮自动追加兔子洞规则。</div>
+      <label class="checkbox_label"><input id="rh_enabled" type="checkbox"> 兔子镜自动注入</label>
+      <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后每轮自动追加兔子镜规则。</div>
 
       <label for="rh_sampling_mode" class="flex-container alignitemscenter" style="gap:8px;flex-wrap:wrap;margin:8px 0;">
         <span>抽取模式</span>
@@ -37,15 +37,15 @@ export function initRabbitHoleUI() {
       <label class="checkbox_label"><input id="rh_force_visual_scenery" type="checkbox"> 动态渐变模式</label>
       <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后允许生成纯 CSS 风景与流动渐变效果。</div>
 
-      <label class="checkbox_label"><input id="rh_user_directive" type="checkbox"> 用户指令优先（正文/兔子洞点播）</label>
+      <label class="checkbox_label"><input id="rh_user_directive" type="checkbox"> 用户指令优先（正文/兔子镜点播）</label>
 
       <label class="checkbox_label"><input id="rh_ui_audit" type="checkbox"> UI 自查优化 / 丰富版式</label>
       <label class="checkbox_label"><input id="rh_avoid_repeat" type="checkbox"> 10轮冷却：避免重复主题/展现形式/近似视觉观感</label>
-      <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">仅记录已经实际生成成功的兔子洞；不会第一轮预抽未来 10 轮。</div>
+      <div class="rabbit-hole-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">仅记录已经实际生成成功的兔子镜；不会第一轮预抽未来 10 轮。</div>
 
       <div class="rabbit-hole-emergency rabbit-hole-emergency-prominent" style="margin:12px 0 10px 0;padding:10px;border:1px solid var(--SmartThemeBorderColor);border-radius:8px;line-height:1.55;">
         <label class="checkbox_label" style="font-weight:600;"><input id="rh_codeblock_rescue" type="checkbox"> 代码块急救模式</label>
-        <div class="rabbit-hole-subnote" style="margin:-2px 0 0 26px;opacity:.78;font-size:12px;line-height:1.45;">兔子洞变成代码块时临时开启，查看渲染效果后请关闭；平时开启可能让 UI 变普通。</div>
+        <div class="rabbit-hole-subnote" style="margin:-2px 0 0 26px;opacity:.78;font-size:12px;line-height:1.45;">兔子镜变成代码块时临时开启，查看渲染效果后请关闭；平时开启可能让 UI 变普通。</div>
       </div>
 
       <div class="rabbit-hole-regex-helper" style="margin:10px 0;padding:10px;border:1px solid var(--SmartThemeBorderColor);border-radius:8px;line-height:1.55;">
@@ -78,12 +78,12 @@ export function initRabbitHoleUI() {
     $('#rh_codeblock_rescue').on('change', e => {
         updateSettings({ codeBlockRescueMode: e.target.checked });
         if (e.target.checked) {
-            toastr?.info?.('已开启代码块急救模式：正在尝试修复当前聊天中的代码块兔子洞。查看完成后建议关闭，以免影响后续 UI 发挥。');
+            toastr?.info?.('已开启代码块急救模式：正在尝试修复当前聊天中的代码块兔子镜。查看完成后建议关闭，以免影响后续 UI 发挥。');
             setTimeout(() => triggerCodeBlockRescue(), 80);
             setTimeout(() => triggerCodeBlockRescue(), 350);
             setTimeout(() => triggerCodeBlockRescue(), 900);
         } else {
-            toastr?.success?.('已关闭代码块急救模式：后续兔子洞将恢复自由渲染。');
+            toastr?.success?.('已关闭代码块急救模式：后续兔子镜将恢复自由渲染。');
         }
     });
     $('#rh_sampling_mode').on('change', e => updateSettings({ samplingMode: e.target.value }));
@@ -113,11 +113,11 @@ export function initRabbitHoleUI() {
 
     $('#rh_clear_last').on('click', () => {
         clearLastCombo();
-        toastr?.success?.('已清除兔子洞上轮组合记录');
+        toastr?.success?.('已清除兔子镜上轮组合记录');
     });
     $('#rh_clear_injection').on('click', () => {
         clearRabbitHolePrompt();
-        toastr?.success?.('已清空当前兔子洞注入');
+        toastr?.success?.('已清空当前兔子镜注入');
     });
     $('#rh_reset').on('click', () => {
         resetSettings();
