@@ -1,7 +1,7 @@
 import { extension_settings } from '../../../../extensions.js';
 import { saveSettingsDebounced } from '../../../../../script.js';
 
-export const MODULE_NAME = 'rabbit_hole_theater';
+export const MODULE_NAME = 'rabbit_mirror_theater';
 
 function cloneDefaultSettings() {
     return typeof structuredClone === 'function'
@@ -12,7 +12,7 @@ function cloneDefaultSettings() {
 export const defaultSettings = Object.freeze({
     enabled: true,
     // 强变量：开启后每轮生成前强制注入兔子镜规则。
-    autoRabbitHoleInjection: true,
+    autoRabbitMirrorInjection: true,
 
     // 一体化模式：不再把 Independent / Canon 拆成用户可选项。
     // 插件内部会根据本轮抽到的主题/展现形式自动判断：
@@ -50,6 +50,9 @@ export const defaultSettings = Object.freeze({
 
     // 勾选后，每轮强制把 10.2.2 Visual Scenery 纳入本轮展现形式。
     forceVisualScenery: false,
+
+    // 勾选后，每轮强制内部包含真实可交互结构；关闭时不强制内部点击，仅保留外层折叠。
+    forceInteractiveMode: false,
 
     // 勾选后，每轮额外注入 UI 自查与去模板化要求，减少相似黑框/记录卡。
     uiAudit: true,
@@ -98,9 +101,10 @@ export function getSettings() {
     settings.formatsMin = Number(settings.formatsMin) || defaultSettings.formatsMin;
     settings.formatsMax = Number(settings.formatsMax) || defaultSettings.formatsMax;
     settings.cooldownRounds = Math.max(1, Number(settings.cooldownRounds) || defaultSettings.cooldownRounds);
-    if (settings.autoRabbitHoleInjection === undefined) settings.autoRabbitHoleInjection = settings.enabled !== false;
+    if (settings.autoRabbitMirrorInjection === undefined) settings.autoRabbitMirrorInjection = settings.enabled !== false;
     if (settings.codeBlockRescueMode === undefined) settings.codeBlockRescueMode = defaultSettings.codeBlockRescueMode;
     if (!['classic', 'format_only'].includes(settings.samplingMode)) settings.samplingMode = defaultSettings.samplingMode;
+    if (settings.forceInteractiveMode === undefined) settings.forceInteractiveMode = defaultSettings.forceInteractiveMode;
     settings.depth = Number(settings.depth) || 0;
     return settings;
 }

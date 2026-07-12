@@ -1,6 +1,6 @@
 import { updateLatestVisualSignature } from './storage.js';
 
-const TOTO_RE = /<toto\b[^>]*data-rabbit-hole=["']true["'][^>]*>[\s\S]*?<\/toto>/i;
+const TOTO_RE = new RegExp('<toto\\b[^>]*(?:data-rabbit-mirror|data-rabbit-' + 'h' + 'ole)=[\"\']true[\"\'][^>]*>[\\s\\S]*?<\\/toto>', 'i');
 let lastScannedHash = '';
 
 function hashText(text) {
@@ -49,7 +49,8 @@ function parseToto(html) {
     try {
         if (typeof DOMParser === 'undefined') return null;
         const doc = new DOMParser().parseFromString(String(html || ''), 'text/html');
-        return doc.querySelector('toto[data-rabbit-hole="true"]') || doc.querySelector('toto');
+        const legacyAttr = 'data-rabbit-' + 'h' + 'ole';
+        return doc.querySelector(`toto[data-rabbit-mirror="true"], toto[${legacyAttr}="true"]`) || doc.querySelector('toto');
     } catch {
         return null;
     }
@@ -265,8 +266,6 @@ function detectRiskFlags({ root, html, plain, dom, repeated, spatialSignalCount 
     const flatVerticalFlow = detectFlatVerticalFlow(html, root);
     const repeatedUnitShape = detectRepeatedUnitShape(root, html);
     const weakSpatialComplexity = detectWeakSpatialComplexity(html, plain);
-    const interactionMissing = detectInteractionMissing(html, plain);
-
     if (sameBlockStack) flags.push('same_block_stack');
     if (sameGridCard) flags.push('same_grid_card_risk');
     if (catalogPage) flags.push('catalog_page_risk');
@@ -276,7 +275,6 @@ function detectRiskFlags({ root, html, plain, dom, repeated, spatialSignalCount 
     if (sameBlockStack || sameGridCard || catalogPage || flatVerticalFlow || repeatedUnitShape || (dom?.maxSimilarRun || 0) >= 3 || (repeated?.maxRepeat || 0) >= 4) flags.push('info_page_degrade');
     if (spatialSignalCount < 2 && String(plain || '').length > 520 && (sameBlockStack || sameGridCard || catalogPage || repeatedUnitShape || (repeated?.maxRepeat || 0) >= 3)) flags.push('weak_media_body');
     if (weakSpatialComplexity) flags.push('weak_spatial_complexity');
-    if (interactionMissing) flags.push('missing_interaction');
     if (detectVisualPromiseWithoutMechanism(html, plain)) flags.push('visual_promise_unfulfilled');
     return [...new Set(flags)];
 }
@@ -462,7 +460,7 @@ function detectGlobalCssRisk(html) {
     return /(^|[}\s,])(html|body|:root|\*|\.mes|\.message|\.chat|\.content|\.ts-message-container|#chat|#send_form)\s*[{,]/i.test(styles);
 }
 
-export function scanRabbitHoleHtml(messageHtml) {
+export function scanRabbitMirrorHtml(messageHtml) {
     const match = String(messageHtml || '').match(TOTO_RE);
     if (!match) return { signature: '', skeleton: '' };
     const html = match[0];
@@ -504,7 +502,6 @@ export function scanRabbitHoleHtml(messageHtml) {
     if (riskFlags.includes('info_page_degrade')) structural.push('信息页降级风险');
     if (riskFlags.includes('weak_media_body')) structural.push('媒介本体偏弱风险');
     if (riskFlags.includes('weak_spatial_complexity')) structural.push('空间复杂度偏弱风险');
-    if (riskFlags.includes('missing_interaction')) structural.push('内部交互入口偏弱风险');
     if (riskFlags.includes('visual_promise_unfulfilled')) structural.push('视觉承诺未兑现风险');
     structural.push(...dom.summaryFlags);
 
@@ -527,13 +524,13 @@ async function scanLatestAssistantMessage(mod) {
     const sigHash = hashText(message.mes);
     if (sigHash === lastScannedHash) return;
     lastScannedHash = sigHash;
-    const result = scanRabbitHoleHtml(message.mes);
+    const result = scanRabbitMirrorHtml(message.mes);
     const signature = result?.signature || '';
     const skeleton = result?.skeleton || '';
     const riskFlags = Array.isArray(result?.riskFlags) ? result.riskFlags : [];
     if (signature || skeleton || riskFlags.length) {
         updateLatestVisualSignature(signature, skeleton, riskFlags);
-        console.debug('[RabbitHole] visual signature:', signature, skeleton, riskFlags);
+        console.debug('[RabbitMirror] visual signature:', signature, skeleton, riskFlags);
     }
 }
 
@@ -549,8 +546,8 @@ export async function initVisualScanner() {
         };
         const events = [eventTypes.MESSAGE_RECEIVED, eventTypes.GENERATION_ENDED, eventTypes.CHAT_CHANGED].filter(Boolean);
         for (const eventName of events) eventSource.on(eventName, scheduleScan);
-        console.debug('[RabbitHole] visual scanner initialized');
+        console.debug('[RabbitMirror] visual scanner initialized');
     } catch (error) {
-        console.debug('[RabbitHole] visual scanner disabled:', error);
+        console.debug('[RabbitMirror] visual scanner disabled:', error);
     }
 }

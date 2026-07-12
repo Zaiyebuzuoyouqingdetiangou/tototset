@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'rabbit_hole_theater:last_combo:v11';
-const PENDING_KEY = 'rabbit_hole_theater:pending_combo:v11';
+const STORAGE_KEY = 'rabbit_mirror_theater:last_combo:v11';
+const PENDING_KEY = 'rabbit_mirror_theater:pending_combo:v11';
 const MAX_STORED = 20;
 
 function readHistory() {
@@ -86,7 +86,7 @@ export function setPendingCombo(combo) {
         const pending = { ...combo, signature: signatureOf(combo), pendingTs: Date.now() };
         localStorage.setItem(PENDING_KEY, JSON.stringify(pending));
     } catch (error) {
-        console.warn('[RabbitHole] Failed to store pending combo:', error);
+        console.warn('[RabbitMirror] Failed to store pending combo:', error);
     }
 }
 
@@ -123,7 +123,7 @@ export function commitPendingCombo(visualSignature = '', visualSkeleton = '', ri
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_STORED)));
         localStorage.removeItem(PENDING_KEY);
     } catch (error) {
-        console.warn('[RabbitHole] Failed to commit pending combo:', error);
+        console.warn('[RabbitMirror] Failed to commit pending combo:', error);
     }
 }
 
@@ -137,17 +137,17 @@ export function clearLastCombo() {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(PENDING_KEY);
         // 清理旧版 key，防止旧记录混淆。
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v3');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v4');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v5');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v6');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v7');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v8');
-        localStorage.removeItem('rabbit_hole_theater:pending_combo:v8');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v9');
-        localStorage.removeItem('rabbit_hole_theater:pending_combo:v9');
-        localStorage.removeItem('rabbit_hole_theater:last_combo:v10');
-        localStorage.removeItem('rabbit_hole_theater:pending_combo:v10');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v3');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v4');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v5');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v6');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v7');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v8');
+        localStorage.removeItem('rabbit_mirror_theater:pending_combo:v8');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v9');
+        localStorage.removeItem('rabbit_mirror_theater:pending_combo:v9');
+        localStorage.removeItem('rabbit_mirror_theater:last_combo:v10');
+        localStorage.removeItem('rabbit_mirror_theater:pending_combo:v10');
     } catch {}
 }
 
@@ -164,6 +164,6 @@ export function updateLatestVisualSignature(visualSignature, visualSkeleton = ''
         last.visualSignatureTs = Date.now();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(-MAX_STORED)));
     } catch (error) {
-        console.warn('[RabbitHole] Failed to store visual signature:', error);
+        console.warn('[RabbitMirror] Failed to store visual signature:', error);
     }
 }
