@@ -1,7 +1,7 @@
 import { extension_settings } from '../../../../extensions.js';
 import { saveSettingsDebounced } from '../../../../../script.js';
 
-export const MODULE_NAME = 'rabbit_mirror_theater';
+export const MODULE_NAME = 'rabbit_mirror_theater_test';
 
 function cloneDefaultSettings() {
     return typeof structuredClone === 'function'

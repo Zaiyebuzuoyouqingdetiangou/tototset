@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'rabbit_mirror_theater:last_combo:v11';
-const PENDING_KEY = 'rabbit_mirror_theater:pending_combo:v11';
+const STORAGE_KEY = 'rabbit_mirror_theater_test:last_combo:v11';
+const PENDING_KEY = 'rabbit_mirror_theater_test:pending_combo:v11';
 const MAX_STORED = 20;
 
 function readHistory() {
@@ -137,17 +137,17 @@ export function clearLastCombo() {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(PENDING_KEY);
         // 清理旧版 key，防止旧记录混淆。
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v3');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v4');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v5');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v6');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v7');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v8');
-        localStorage.removeItem('rabbit_mirror_theater:pending_combo:v8');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v9');
-        localStorage.removeItem('rabbit_mirror_theater:pending_combo:v9');
-        localStorage.removeItem('rabbit_mirror_theater:last_combo:v10');
-        localStorage.removeItem('rabbit_mirror_theater:pending_combo:v10');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v3');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v4');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v5');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v6');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v7');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v8');
+        localStorage.removeItem('rabbit_mirror_theater_test:pending_combo:v8');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v9');
+        localStorage.removeItem('rabbit_mirror_theater_test:pending_combo:v9');
+        localStorage.removeItem('rabbit_mirror_theater_test:last_combo:v10');
+        localStorage.removeItem('rabbit_mirror_theater_test:pending_combo:v10');
     } catch {}
 }
 

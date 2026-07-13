@@ -5,11 +5,11 @@ import { initVisualScanner } from './src/visualScanner.js';
 import { initOutputSanitizer } from './src/outputSanitizer.js';
 
 // SillyTavern reads this global function name from manifest.json -> generate_interceptor.
-globalThis.rabbitMirrorGenerateInterceptor = rabbitMirrorGenerateInterceptor;
+globalThis.rabbitMirrorTestGenerateInterceptor = rabbitMirrorGenerateInterceptor;
 
 jQuery(async () => {
     try {
-        const migrationKey = 'rabbitMirrorVisualReset:0.31.75';
+        const migrationKey = 'rabbitMirrorTestVisualReset:0.31.76';
         if (!localStorage.getItem(migrationKey)) {
             clearLastCombo();
             localStorage.setItem(migrationKey, '1');
