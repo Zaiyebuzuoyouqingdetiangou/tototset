@@ -4,7 +4,7 @@
   "js": "index.js",
   "css": "style.css",
   "author": "Toto",
-  "version": "0.31.73",
+  "version": "0.31.75",
   "homePage": "https://github.com/Zaiyebuzuoyouqingdetiangou/tototset",
   "auto_update": true,
   "generate_interceptor": "rabbitMirrorGenerateInterceptor",
@@ -13,5 +13,5 @@
     "disable": "onDisable",
     "clean": "onClean"
   },
-  "description": "Rabbit Mirror Theater test build: 7.10/0.31.50 generation baseline with current code and interaction rescue runtime."
+  "description": "Rabbit Mirror Theater visual reset test: restores scene-led aesthetics, rejects default dark control panels, preserves current interaction rescue runtime."
 }

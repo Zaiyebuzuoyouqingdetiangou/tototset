@@ -111,8 +111,25 @@ function rewriteCssIdReferences(cssText, idMap) {
         const escaped = escapeRegExp(oldId);
         // 常规 #id 选择器与 CSS/SVG url(#id) 引用。
         css = css
-            .replace(new RegExp(`#${escaped}(?![\\w-])`, 'g'), `#${newId}`)
-            .replace(new RegExp(`url\\(\\s*(["']?)#${escaped}\\1\\s*\\)`, 'g'), `url(#${newId})`);
+            .replace(new RegExp(`#${escaped}(?![\w-])`, 'g'), `#${newId}`)
+            .replace(new RegExp(`url\(\s*(["']?)#${escaped}\1\s*\)`, 'g'), `url(#${newId})`);
+
+        // ID 隔离后，CSS 属性选择器也必须同步。
+        // 典型模型输出：#d1:checked ~ label[for="d1"] div。
+        // 过去只改写 #d1 与真实 label.for，遗漏了 style 文本中的 [for="d1"]，
+        // 导致整条选择器永久失配。这里只处理明确承载 ID 引用的属性。
+        for (const attr of ['for', 'aria-controls', 'aria-labelledby', 'aria-describedby']) {
+            css = css.replace(
+                new RegExp(`(\[\s*${attr}\s*=\s*["'])${escaped}(["']\s*\])`, 'gi'),
+                `$1${newId}$2`,
+            );
+        }
+        for (const attr of ['href', 'xlink\\:href']) {
+            css = css.replace(
+                new RegExp(`(\[\s*${attr}\s*=\s*["']#)${escaped}(["']\s*\])`, 'gi'),
+                `$1${newId}$2`,
+            );
+        }
     }
     return css;
 }

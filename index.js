@@ -8,6 +8,13 @@ import { initOutputSanitizer } from './src/outputSanitizer.js';
 globalThis.rabbitMirrorGenerateInterceptor = rabbitMirrorGenerateInterceptor;
 
 jQuery(async () => {
+    try {
+        const migrationKey = 'rabbitMirrorVisualReset:0.31.75';
+        if (!localStorage.getItem(migrationKey)) {
+            clearLastCombo();
+            localStorage.setItem(migrationKey, '1');
+        }
+    } catch {}
     initRabbitMirrorUI();
     initOutputSanitizer();
     initVisualScanner();
