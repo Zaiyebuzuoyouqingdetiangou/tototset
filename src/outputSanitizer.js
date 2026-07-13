@@ -22,11 +22,69 @@ function isCodeBlockRescueModeEnabled() {
     }
 }
 
+function isInteractionRescueModeEnabled() {
+    try {
+        return !!getSettings().interactionRescueMode;
+    } catch {
+        return false;
+    }
+}
+
 
 const MIRROR_TOTO_SELECTOR = 'toto[data-rabbit-mirror="true"], toto[data-rabbit-hole="true"]';
 let interactionScopeCounter = 0;
 const interactionScopeStates = new WeakMap();
 const SCOPED_INTERACTION_ID_RE = /^(rm-[a-z0-9]+-[a-z0-9]+-[a-z0-9]{5}-)(.+)$/i;
+
+const INTERACTION_RESCUE_MEMORY_KEY = 'rabbitMirrorInteractionRescueMemoryV1';
+const rememberedInteractionRescueKeys = new Set();
+
+function hashInteractionSignature(text) {
+    let hash = 2166136261;
+    for (const char of String(text || '')) {
+        hash ^= char.charCodeAt(0);
+        hash = Math.imul(hash, 16777619);
+    }
+    return (hash >>> 0).toString(36);
+}
+
+function getInteractionRescueKey(toto) {
+    if (!toto?.querySelectorAll) return '';
+    const summary = (toto.querySelector('summary')?.textContent || '').replace(/\s+/g, ' ').trim();
+    const bodyText = (toto.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 1200);
+    const inputs = toto.querySelectorAll('input[type="checkbox"], input[type="radio"]').length;
+    const labels = toto.querySelectorAll('label').length;
+    return hashInteractionSignature(`${summary}|${inputs}|${labels}|${bodyText}`);
+}
+
+function loadRememberedInteractionRescues() {
+    if (rememberedInteractionRescueKeys.size) return;
+    try {
+        const values = JSON.parse(sessionStorage.getItem(INTERACTION_RESCUE_MEMORY_KEY) || '[]');
+        if (Array.isArray(values)) values.forEach(value => value && rememberedInteractionRescueKeys.add(String(value)));
+    } catch {
+        // sessionStorage unavailable; in-memory memory still works.
+    }
+}
+
+function rememberInteractionRescue(toto) {
+    const key = getInteractionRescueKey(toto);
+    if (!key) return;
+    loadRememberedInteractionRescues();
+    rememberedInteractionRescueKeys.add(key);
+    try {
+        sessionStorage.setItem(INTERACTION_RESCUE_MEMORY_KEY, JSON.stringify([...rememberedInteractionRescueKeys].slice(-300)));
+    } catch {
+        // Ignore storage failures.
+    }
+}
+
+function wasInteractionRescued(toto) {
+    const key = getInteractionRescueKey(toto);
+    if (!key) return false;
+    loadRememberedInteractionRescues();
+    return rememberedInteractionRescueKeys.has(key);
+}
 
 function createInteractionScopePrefix() {
     interactionScopeCounter += 1;
@@ -118,6 +176,371 @@ function strengthenRabbitMirrorCheckedStateCss(toto) {
     });
 }
 
+
+
+const interactionInlineOverrideStates = new WeakMap();
+
+
+function parseCheckedRulesFromText(toto, input) {
+    if (!toto?.querySelectorAll || !input?.id) return [];
+    const escapedId = escapeRegExp(input.id);
+    const selectorNeedle = new RegExp(`#${escapedId}:checked\\s*([+~])\\s*([^,{]+)`, 'i');
+    const results = [];
+
+    for (const styleEl of toto.querySelectorAll('style')) {
+        const css = String(styleEl.textContent || '');
+        const blockRe = /([^{}]+)\{([^{}]*)\}/g;
+        let match;
+        while ((match = blockRe.exec(css))) {
+            const selectors = String(match[1] || '').split(',').map(v => v.trim()).filter(Boolean);
+            const declarations = String(match[2] || '');
+            for (const selector of selectors) {
+                const selectorMatch = selector.match(selectorNeedle);
+                if (!selectorMatch) continue;
+                const relation = selectorMatch[1];
+                const targetSelector = selectorMatch[2].trim();
+                const styleMap = [];
+                declarations.replace(/(^|;)\s*([a-z-]+)\s*:\s*([^;{}]+?)(\s*!important\s*)?(?=;|$)/gi,
+                    (_m, _sep, property, value) => {
+                        const cleanValue = String(value || '').trim().replace(/\s*!important\s*$/i, '');
+                        if (property && cleanValue) styleMap.push([property, cleanValue]);
+                        return _m;
+                    });
+                if (styleMap.length) results.push({ relation, targetSelector, styleMap });
+            }
+        }
+    }
+    return results;
+}
+
+function getSiblingTargetsForCheckedRule(input, relation, targetSelector) {
+    const targets = [];
+    if (!input?.parentElement || !targetSelector) return targets;
+    let node = input.nextElementSibling;
+    if (relation === '+') {
+        if (node?.matches?.(targetSelector)) targets.push(node);
+        return targets;
+    }
+    while (node) {
+        if (node.matches?.(targetSelector)) targets.push(node);
+        node = node.nextElementSibling;
+    }
+    return targets;
+}
+
+function getCrossContainerTargetsForCheckedRule(root, targetSelector) {
+    if (!root?.querySelectorAll || !targetSelector) return [];
+    try {
+        const targets = [...root.querySelectorAll(targetSelector)];
+        // 跨容器急救只接受当前兔子镜内明确且数量可控的目标，避免宽泛选择器误伤整页。
+        if (!targets.length || targets.length > 12) return [];
+        return targets;
+    } catch {
+        return [];
+    }
+}
+
+function applyCheckedRuleTextFallback(toto, input) {
+    if (!toto || !input) return 0;
+    restoreInteractionInlineOverrides(input);
+    if (!input.checked) return 0;
+
+    const records = [];
+    for (const rule of parseCheckedRulesFromText(toto, input)) {
+        let targets = getSiblingTargetsForCheckedRule(input, rule.relation, rule.targetSelector);
+        // 模型常把 input 放在按钮容器、反馈放在相邻内容容器，导致 +/~ 永远跨不出父级。
+        // 原结构无匹配时，降级为当前兔子镜根内的受控目标查找，直接实现规则最终状态。
+        if (!targets.length) targets = getCrossContainerTargetsForCheckedRule(toto, rule.targetSelector);
+        for (const target of targets) {
+            for (const [property, value] of rule.styleMap) {
+                records.push({
+                    element: target,
+                    property,
+                    value: target.style.getPropertyValue(property),
+                    priority: target.style.getPropertyPriority(property),
+                });
+                target.style.setProperty(property, value, 'important');
+            }
+        }
+    }
+    if (records.length) interactionInlineOverrideStates.set(input, records);
+    return records.length;
+}
+
+function restoreInteractionInlineOverrides(input) {
+    const records = interactionInlineOverrideStates.get(input);
+    if (!records) return;
+    for (const record of records) {
+        const { element, property, value, priority } = record;
+        if (!element?.style) continue;
+        if (value) element.style.setProperty(property, value, priority || '');
+        else element.style.removeProperty(property);
+    }
+    interactionInlineOverrideStates.delete(input);
+}
+
+function applyCheckedRuleInlineFallback(toto, input) {
+    if (!toto?.querySelectorAll || !input?.id) return;
+
+    restoreInteractionInlineOverrides(input);
+    if (!input.checked) return;
+
+    const escapedId = typeof CSS !== 'undefined' && CSS.escape
+        ? CSS.escape(input.id)
+        : String(input.id).replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+    const idNeedle = `#${escapedId}:checked`;
+    const records = [];
+
+    const applyRule = (selectorText, style) => {
+        if (!selectorText || !style || !selectorText.includes(idNeedle)) return;
+        let targets = [];
+        try {
+            targets = [...toto.querySelectorAll(selectorText)];
+        } catch {
+            return;
+        }
+        for (const target of targets) {
+            for (const property of [...style]) {
+                const value = style.getPropertyValue(property);
+                if (!value) continue;
+                records.push({
+                    element: target,
+                    property,
+                    value: target.style.getPropertyValue(property),
+                    priority: target.style.getPropertyPriority(property),
+                });
+                target.style.setProperty(property, value, 'important');
+            }
+        }
+    };
+
+    for (const styleEl of toto.querySelectorAll('style')) {
+        try {
+            const visitRules = (rules) => {
+                for (const rule of [...(rules || [])]) {
+                    if (rule?.cssRules) visitRules(rule.cssRules);
+                    if (rule?.selectorText && rule?.style) applyRule(rule.selectorText, rule.style);
+                }
+            };
+            visitRules(styleEl.sheet?.cssRules);
+        } catch {
+            // CSSOM 不可读时，文本级 !important 修复仍然保留。
+        }
+    }
+
+    if (records.length) interactionInlineOverrideStates.set(input, records);
+}
+
+
+
+
+const TARGET_ACTIVE_ATTR = 'data-rm-target-active';
+const TARGET_RESCUE_STYLE_ATTR = 'data-rabbit-mirror-target-rescue';
+const interactionCapabilityStates = new WeakMap();
+
+function detectInteractionCapabilities(root) {
+    if (!root?.querySelectorAll) return { checked: false, hover: false, details: false, target: false };
+    const cssText = [...root.querySelectorAll('style')].map(style => style.textContent || '').join('\n');
+    const outerDetails = root.matches?.('details') ? root : root.querySelector(':scope > details');
+    const nestedDetails = [...root.querySelectorAll('details')].filter(item => item !== outerDetails);
+    const capabilities = {
+        checked: !!root.querySelector('input[type="checkbox"], input[type="radio"]') || /:checked\b/i.test(cssText),
+        hover: /:hover\b/i.test(cssText),
+        details: nestedDetails.length > 0,
+        target: /:target\b/i.test(cssText) || !!root.querySelector('a[href^="#"]'),
+    };
+    interactionCapabilityStates.set(root, capabilities);
+    root.dataset.rabbitMirrorInteractionRoutes = Object.entries(capabilities)
+        .filter(([, enabled]) => enabled)
+        .map(([name]) => name)
+        .join(',') || 'none';
+    return capabilities;
+}
+
+function collectTargetRulesFromCss(cssText) {
+    const rules = [];
+    const blockRe = /([^{}]+)\{([^{}]*)\}/g;
+    let match;
+    while ((match = blockRe.exec(String(cssText || '')))) {
+        const selectorText = String(match[1] || '').trim();
+        if (!selectorText || selectorText.startsWith('@') || !/:target\b/i.test(selectorText)) continue;
+        const declarations = addImportantToDeclarationBlock(String(match[2] || ''));
+        if (!declarations.trim()) continue;
+        const selectors = selectorText.split(',')
+            .map(value => value.trim())
+            .filter(Boolean)
+            .map(selector => selector.replace(/:target\b/gi, `[${TARGET_ACTIVE_ATTR}="true"]`));
+        if (selectors.length) rules.push(`${selectors.join(', ')} {${declarations}}`);
+    }
+    return rules.join('\n');
+}
+
+function refreshTargetRescue(root) {
+    if (!root?.querySelectorAll) return;
+    let combinedCss = '';
+    root.querySelectorAll(`style:not([${TARGET_RESCUE_STYLE_ATTR}])`).forEach(styleEl => {
+        const parsed = collectTargetRulesFromCss(styleEl.textContent || '');
+        if (parsed) combinedCss += `${parsed}\n`;
+    });
+    let rescueStyle = root.querySelector(`style[${TARGET_RESCUE_STYLE_ATTR}]`);
+    if (combinedCss.trim()) {
+        if (!rescueStyle) {
+            rescueStyle = document.createElement('style');
+            rescueStyle.setAttribute(TARGET_RESCUE_STYLE_ATTR, 'true');
+            root.appendChild(rescueStyle);
+        }
+        const nextCss = combinedCss.trim();
+        if (rescueStyle.textContent !== nextCss) rescueStyle.textContent = nextCss;
+    } else if (rescueStyle) {
+        rescueStyle.remove();
+    }
+
+    if (root.dataset.rabbitMirrorTargetFallback === 'true') return;
+    root.addEventListener('click', event => {
+        const anchor = event.target?.closest?.('a[href^="#"]');
+        if (!anchor || !root.contains(anchor)) return;
+        const rawId = String(anchor.getAttribute('href') || '').slice(1);
+        if (!rawId) return;
+        let target = null;
+        try {
+            target = [...root.querySelectorAll('[id]')].find(el => el.id === decodeURIComponent(rawId));
+        } catch {
+            target = [...root.querySelectorAll('[id]')].find(el => el.id === rawId);
+        }
+        if (!target) return;
+        event.preventDefault();
+        root.querySelectorAll(`[${TARGET_ACTIVE_ATTR}="true"]`).forEach(el => {
+            if (el !== target) el.removeAttribute(TARGET_ACTIVE_ATTR);
+        });
+        const active = target.getAttribute(TARGET_ACTIVE_ATTR) === 'true';
+        if (active) target.removeAttribute(TARGET_ACTIVE_ATTR);
+        else target.setAttribute(TARGET_ACTIVE_ATTR, 'true');
+    }, true);
+    root.dataset.rabbitMirrorTargetFallback = 'true';
+}
+
+function installNestedDetailsFallback(root) {
+    if (!root?.querySelectorAll || root.dataset.rabbitMirrorDetailsFallback === 'true') return;
+    const outerDetails = root.matches?.('details') ? root : root.querySelector(':scope > details');
+    root.addEventListener('click', event => {
+        const summary = event.target?.closest?.('summary');
+        const details = summary?.parentElement;
+        if (!summary || !details || details.tagName !== 'DETAILS' || details === outerDetails || !root.contains(details)) return;
+        // 仅当宿主没有在本次点击中改变 open 状态时才兜底，避免双重切换。
+        const before = details.open;
+        setTimeout(() => {
+            if (details.isConnected && details.open === before) details.open = !before;
+        }, 0);
+    }, true);
+    root.dataset.rabbitMirrorDetailsFallback = 'true';
+}
+
+function installIntelligentInteractionRescue(root) {
+    const capabilities = detectInteractionCapabilities(root);
+    if (capabilities.checked) {
+        strengthenRabbitMirrorCheckedStateCss(root);
+        installInteractionLabelFallback(root);
+    }
+    if (capabilities.hover) refreshTouchHoverRescue(root);
+    if (capabilities.target) refreshTargetRescue(root);
+    if (capabilities.details) installNestedDetailsFallback(root);
+}
+
+const touchHoverRescueStates = new WeakMap();
+const TOUCH_HOVER_ATTR = 'data-rm-touch-hover';
+const TOUCH_HOVER_STYLE_ATTR = 'data-rabbit-mirror-touch-hover-rescue';
+
+function collectTouchHoverRulesFromCss(cssText) {
+    const rules = [];
+    const subjects = new Set();
+    const blockRe = /([^{}]+)\{([^{}]*)\}/g;
+    let match;
+
+    while ((match = blockRe.exec(String(cssText || '')))) {
+        const selectorText = String(match[1] || '').trim();
+        if (!selectorText || selectorText.startsWith('@') || !/:hover\b/i.test(selectorText)) continue;
+
+        const declarations = addImportantToDeclarationBlock(String(match[2] || ''));
+        if (!declarations.trim()) continue;
+
+        const transformedSelectors = [];
+        for (const selector of selectorText.split(',').map(value => value.trim()).filter(Boolean)) {
+            if (!/:hover\b/i.test(selector)) continue;
+
+            // 手机端以一个持久属性模拟当前元素的 :hover 状态。
+            transformedSelectors.push(selector.replace(/:hover\b/gi, `[${TOUCH_HOVER_ATTR}="true"]`));
+
+            // 只提取紧邻 :hover 的简单主体（class / id / tag / attribute compound）。
+            // 这覆盖模型最常生成的 .area:hover、#panel:hover、label:hover 等结构。
+            const subjectRe = /((?:[a-zA-Z][\w-]*)?(?:[#.][\w-]+|\[[^\]]+\])*)\s*:hover\b/gi;
+            let subjectMatch;
+            while ((subjectMatch = subjectRe.exec(selector))) {
+                const subject = String(subjectMatch[1] || '').trim();
+                if (subject) subjects.add(subject);
+            }
+        }
+
+        if (transformedSelectors.length) {
+            rules.push(`${transformedSelectors.join(', ')} {${declarations}}`);
+        }
+    }
+
+    return { cssText: rules.join('\n'), subjects: [...subjects] };
+}
+
+function refreshTouchHoverRescue(toto) {
+    if (!toto?.querySelectorAll) return;
+
+    let combinedCss = '';
+    const subjects = new Set();
+    toto.querySelectorAll(`style:not([${TOUCH_HOVER_STYLE_ATTR}])`).forEach(styleEl => {
+        const parsed = collectTouchHoverRulesFromCss(styleEl.textContent || '');
+        if (parsed.cssText) combinedCss += `${parsed.cssText}\n`;
+        parsed.subjects.forEach(subject => subjects.add(subject));
+    });
+
+    let rescueStyle = toto.querySelector(`style[${TOUCH_HOVER_STYLE_ATTR}]`);
+    if (combinedCss.trim()) {
+        if (!rescueStyle) {
+            rescueStyle = document.createElement('style');
+            rescueStyle.setAttribute(TOUCH_HOVER_STYLE_ATTR, 'true');
+            toto.appendChild(rescueStyle);
+        }
+        const nextCss = combinedCss.trim();
+        if (rescueStyle.textContent !== nextCss) rescueStyle.textContent = nextCss;
+    } else if (rescueStyle) {
+        rescueStyle.remove();
+    }
+
+    touchHoverRescueStates.set(toto, { subjects: [...subjects] });
+
+    if (toto.dataset.rabbitMirrorTouchHoverFallback === 'true') return;
+    toto.addEventListener('click', (event) => {
+        const state = touchHoverRescueStates.get(toto);
+        if (!state?.subjects?.length) return;
+
+        let hoverTarget = null;
+        for (const subject of state.subjects) {
+            try {
+                const candidate = event.target?.closest?.(subject);
+                if (candidate && toto.contains(candidate)) {
+                    hoverTarget = candidate;
+                    break;
+                }
+            } catch {
+                // Ignore malformed model-generated selectors.
+            }
+        }
+        if (!hoverTarget) return;
+
+        const isActive = hoverTarget.getAttribute(TOUCH_HOVER_ATTR) === 'true';
+        if (isActive) hoverTarget.removeAttribute(TOUCH_HOVER_ATTR);
+        else hoverTarget.setAttribute(TOUCH_HOVER_ATTR, 'true');
+    }, false);
+
+    toto.dataset.rabbitMirrorTouchHoverFallback = 'true';
+}
+
 function installInteractionLabelFallback(toto) {
     if (!toto || toto.dataset.rabbitMirrorInteractionFallback === 'true') return;
 
@@ -136,10 +559,24 @@ function installInteractionLabelFallback(toto) {
         event.preventDefault();
         const previous = !!input.checked;
         if (input.type === 'radio') {
+            // 先恢复同组上一分支由急救器写入的内联状态，再切换到当前分支。
+            const radioName = String(input.name || '');
+            [...toto.querySelectorAll('input[type="radio"]')]
+                .filter(item => item !== input && (!radioName || item.name === radioName))
+                .forEach(item => restoreInteractionInlineOverrides(item));
             input.checked = true;
         } else {
             input.checked = !input.checked;
         }
+
+        // 在部分移动端 WebView 中，晚到的 <style> 即使被补上 !important，
+        // 也可能未稳定覆盖元素原有的内联 display:none。这里直接按真实 :checked
+        // 规则把状态声明落到匹配目标上，取消勾选时再恢复，作为最终兜底。
+        // 先走不依赖 CSSOM 的文本解析兜底；酒馆/WebView 即使不给 style.sheet，仍能修复。
+        // 文本规则命中后不要再运行 CSSOM 兜底，否则后者开头的恢复动作会撤销刚应用的状态。
+        const textRuleCount = applyCheckedRuleTextFallback(toto, input);
+        // 仅在文本解析没有命中时再尝试 CSSOM（例如规则位于复杂 @media 内）。
+        if (!textRuleCount) applyCheckedRuleInlineFallback(toto, input);
 
         if (previous !== input.checked) {
             input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -319,16 +756,36 @@ function scopeRabbitMirrorInteractionIds(toto) {
     });
 
     synchronizeInteractionReferences(toto, state.idMap);
-    strengthenRabbitMirrorCheckedStateCss(toto);
+    installIntelligentInteractionRescue(toto);
     toto.dataset.rabbitMirrorInteractionScoped = 'true';
-    installInteractionLabelFallback(toto);
+}
+
+function getRenderedRabbitMirrorInteractionRoots(root) {
+    if (!root?.querySelectorAll) return [];
+    const candidates = new Set(root.querySelectorAll(MIRROR_TOTO_SELECTOR));
+
+    // 部分酒馆渲染/净化链会移除未知的 <toto> 外壳，但保留带“兔子镜”标题的 <details>。
+    // 代码块急救原本已有该兼容路径；交互急救也必须识别同一类实际渲染结果。
+    root.querySelectorAll('details').forEach(details => {
+        if (!isRabbitMirrorDetails(details)) return;
+        if (details.closest(MIRROR_TOTO_SELECTOR)) return;
+        candidates.add(details);
+    });
+
+    return [...candidates];
 }
 
 function scopeRabbitMirrorInteractionsInChatDom() {
     const root = getChatRoot();
     if (!root) return;
-    root.querySelectorAll(MIRROR_TOTO_SELECTOR).forEach(toto => {
-        if (isInsideChatMessage(toto)) scopeRabbitMirrorInteractionIds(toto);
+    const enabled = isInteractionRescueModeEnabled();
+    getRenderedRabbitMirrorInteractionRoots(root).forEach(mirrorRoot => {
+        if (!isInsideChatMessage(mirrorRoot)) return;
+        const remembered = wasInteractionRescued(mirrorRoot);
+        if (!enabled && !remembered) return;
+        if (enabled && !remembered) rememberInteractionRescue(mirrorRoot);
+        scopeRabbitMirrorInteractionIds(mirrorRoot);
+        mirrorRoot.dataset.rabbitMirrorInteractionRescued = 'true';
     });
 }
 
@@ -787,14 +1244,24 @@ function sanitizeCodeBlocksInChatDom() {
     }
 }
 
+export function triggerInteractionRescue() {
+    try {
+        // 已经修复过的兔子镜会被会话记忆继续维护；关闭开关只停止处理新消息。
+        scopeRabbitMirrorInteractionsInChatDom();
+    } catch (error) {
+        console.debug('[RabbitMirror] interaction rescue trigger failed:', error);
+    }
+}
+
 export function triggerCodeBlockRescue(mod = null) {
     try {
-        scopeRabbitMirrorInteractionsInChatDom();
-        if (!isCodeBlockRescueModeEnabled()) return;
-        sanitizeLatestRawMessages(mod || globalThis);
-        sanitizeCodeBlocksInChatDom();
-        sanitizeRenderedRabbitMirrorDetailsDom();
-        scopeRabbitMirrorInteractionsInChatDom();
+        if (isCodeBlockRescueModeEnabled()) {
+            sanitizeLatestRawMessages(mod || globalThis);
+            sanitizeCodeBlocksInChatDom();
+            sanitizeRenderedRabbitMirrorDetailsDom();
+        }
+        // 两项同时开启时固定为：先恢复真实 DOM，再修交互。
+        triggerInteractionRescue();
     } catch (error) {
         console.debug('[RabbitMirror] code block rescue trigger failed:', error);
     }
@@ -802,16 +1269,15 @@ export function triggerCodeBlockRescue(mod = null) {
 
 function scheduleSanitize(mod) {
     const run = () => {
-        // 交互作用域修复与代码块急救解耦：无论急救是否开启，都只在当前兔子镜内部
-        // 同步处理 id / for / radio name / CSS 引用，不改背景、布局或普通 class。
-        scopeRabbitMirrorInteractionsInChatDom();
-        if (!isCodeBlockRescueModeEnabled()) return;
-        // 先修原始消息，避免保存后继续携带代码块壳。
-        sanitizeLatestRawMessages(mod);
-        // 再只修聊天区内已经渲染出来的代码块，不扫描设置页，避免误伤其他插件 UI。
-        sanitizeCodeBlocksInChatDom();
-        sanitizeRenderedRabbitMirrorDetailsDom();
-        scopeRabbitMirrorInteractionsInChatDom();
+        if (isCodeBlockRescueModeEnabled()) {
+            // 先修原始消息，避免保存后继续携带代码块壳。
+            sanitizeLatestRawMessages(mod);
+            // 再只修聊天区内已经渲染出来的代码块，不扫描设置页，避免误伤其他插件 UI。
+            sanitizeCodeBlocksInChatDom();
+            sanitizeRenderedRabbitMirrorDetailsDom();
+        }
+        // 交互急救独立受控；若代码块急救也开启，此时 DOM 已恢复完成。
+        triggerInteractionRescue();
     };
     setTimeout(run, 80);
     setTimeout(run, 350);

@@ -246,8 +246,8 @@ ${shortVisualAvoidance(combo, 3)}${recentRiskCorrection(!!settings.forceInteract
 
     if (visualSceneryMode) {
         chunks.push(String.raw`
-动态视觉模式:
-  本轮强制执行下方动态视觉画布规则。`);
+动态渐变模式:
+  允许使用纯 样式/矢量图形 构建风景化、光影化、流动渐变或环境动态效果；必须服务本轮展现形式，不得为了动而动。`);
         chunks.push(VISUAL_SCENERY_RULES);
     }
 

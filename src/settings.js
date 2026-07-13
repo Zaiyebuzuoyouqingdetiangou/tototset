@@ -38,6 +38,8 @@ export const defaultSettings = Object.freeze({
     richFormatBias: true,
     // 代码块急救模式：仅在兔子镜显示成代码块时临时开启。默认关闭，避免平时影响 UI 发挥。
     codeBlockRescueMode: false,
+    // 智能交互急救：识别 checked、hover、嵌套 details、:target 等交互类型并选择对应兜底路径。可与代码块急救串联。
+    interactionRescueMode: false,
     // 强制启动增强：将小剧场作为本轮输出格式的一部分，而不是可选附加项。
     hardStartup: true,
     // 语言锁定增强：所有可见 UI 文案也必须为简体中文，禁止英文承担主要界面标签。
@@ -103,6 +105,7 @@ export function getSettings() {
     settings.cooldownRounds = Math.max(1, Number(settings.cooldownRounds) || defaultSettings.cooldownRounds);
     if (settings.autoRabbitMirrorInjection === undefined) settings.autoRabbitMirrorInjection = settings.enabled !== false;
     if (settings.codeBlockRescueMode === undefined) settings.codeBlockRescueMode = defaultSettings.codeBlockRescueMode;
+    if (settings.interactionRescueMode === undefined) settings.interactionRescueMode = defaultSettings.interactionRescueMode;
     if (!['classic', 'format_only'].includes(settings.samplingMode)) settings.samplingMode = defaultSettings.samplingMode;
     if (settings.forceInteractiveMode === undefined) settings.forceInteractiveMode = defaultSettings.forceInteractiveMode;
     settings.depth = Number(settings.depth) || 0;

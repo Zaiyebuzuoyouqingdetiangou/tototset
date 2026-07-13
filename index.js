@@ -1,24 +1,24 @@
-import { initRabbitHoleUI } from './src/ui.js';
-import { rabbitHoleGenerateInterceptor, clearRabbitHolePrompt } from './src/injector.js';
+import { initRabbitMirrorUI } from './src/ui.js';
+import { rabbitMirrorGenerateInterceptor, clearRabbitMirrorPrompt } from './src/injector.js';
 import { clearLastCombo } from './src/storage.js';
 import { initVisualScanner } from './src/visualScanner.js';
 import { initOutputSanitizer } from './src/outputSanitizer.js';
 
 // SillyTavern reads this global function name from manifest.json -> generate_interceptor.
-globalThis.rabbitHoleGenerateInterceptor = rabbitHoleGenerateInterceptor;
+globalThis.rabbitMirrorGenerateInterceptor = rabbitMirrorGenerateInterceptor;
 
 jQuery(async () => {
-    initRabbitHoleUI();
+    initRabbitMirrorUI();
     initOutputSanitizer();
     initVisualScanner();
-    console.log('[RabbitHole] loaded');
+    console.log('[RabbitMirror] loaded');
 });
 
 export function onDisable() {
-    clearRabbitHolePrompt();
+    clearRabbitMirrorPrompt();
 }
 
 export function onClean() {
-    clearRabbitHolePrompt();
+    clearRabbitMirrorPrompt();
     clearLastCombo();
 }

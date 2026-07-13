@@ -1,7 +1,7 @@
 import { getSettings, updateSettings, resetSettings } from './settings.js';
 import { clearLastCombo } from './storage.js';
 import { clearRabbitMirrorPrompt } from './injector.js';
-import { triggerCodeBlockRescue } from './outputSanitizer.js';
+import { triggerCodeBlockRescue, triggerInteractionRescue } from './outputSanitizer.js';
 
 function checked(id, value) {
     $(id).prop('checked', !!value);
@@ -16,7 +16,7 @@ export function initRabbitMirrorUI() {
 <div id="rabbit_mirror_theater_settings" class="rabbit-mirror-settings">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>兔子镜小剧场 / Rabbit Mirror Theater</b><span class="rabbit-mirror-toto-watermark">Toto v0.31.56</span>
+      <b>兔子镜小剧场 / Rabbit Mirror Theater</b><span class="rabbit-mirror-toto-watermark">Toto v0.31.73</span>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
@@ -35,7 +35,7 @@ export function initRabbitMirrorUI() {
       <div class="rabbit-mirror-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后，主题元素与展现形式只作为灵感基底，允许根据正文氛围发散出元素库之外的新内容、新媒介、新细节与新结构。</div>
 
       <label class="checkbox_label"><input id="rh_force_visual_scenery" type="checkbox"> 动态视觉模式</label>
-      <div class="rabbit-mirror-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后每轮至少包含一处打开即自动持续运行、肉眼可见的 CSS @keyframes 动效；SVG animate、点击或悬停变化不能代替。</div>
+      <div class="rabbit-mirror-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后画面主体必须包含打开即自动持续运行、肉眼可见的 CSS 动画；点击或悬停变化不能代替。</div>
 
       <label class="checkbox_label"><input id="rh_force_interactive" type="checkbox"> 每轮可交互模式（测试版）</label>
       <div class="rabbit-mirror-subnote" style="margin:-2px 0 6px 26px;opacity:.72;font-size:12px;line-height:1.45;">开启后内部每轮必须包含无需 JS 即可生效的真实交互；关闭时不强制内部交互，只保留外层折叠。</div>
@@ -48,7 +48,9 @@ export function initRabbitMirrorUI() {
 
       <div class="rabbit-mirror-emergency rabbit-mirror-emergency-prominent" style="margin:12px 0 10px 0;padding:10px;border:1px solid var(--SmartThemeBorderColor);border-radius:8px;line-height:1.55;">
         <label class="checkbox_label" style="font-weight:600;"><input id="rh_codeblock_rescue" type="checkbox"> 代码块急救模式</label>
-        <div class="rabbit-mirror-subnote" style="margin:-2px 0 0 26px;opacity:.78;font-size:12px;line-height:1.45;">兔子镜变成代码块时临时开启，查看渲染效果后请关闭；平时开启可能让 UI 变普通。</div>
+        <div class="rabbit-mirror-subnote" style="margin:-2px 0 8px 26px;opacity:.78;font-size:12px;line-height:1.45;">兔子镜变成代码块时临时开启；先恢复为真实 DOM，不改已有主容器 UI。</div>
+        <label class="checkbox_label" style="font-weight:600;"><input id="rh_interaction_rescue" type="checkbox"> 智能交互急救（实验版）</label>
+        <div class="rabbit-mirror-subnote" style="margin:-2px 0 0 26px;opacity:.78;font-size:12px;line-height:1.45;">自动识别 checked、hover、嵌套 details 与 :target 交互并选择对应修复路径；可与代码块急救同时开启，固定先恢复代码、再修交互。</div>
       </div>
 
       <div class="rabbit-mirror-regex-helper" style="margin:10px 0;padding:10px;border:1px solid var(--SmartThemeBorderColor);border-radius:8px;line-height:1.55;">
@@ -70,6 +72,7 @@ export function initRabbitMirrorUI() {
 
     checked('#rh_enabled', settings.autoRabbitMirrorInjection !== false && settings.enabled !== false);
     checked('#rh_codeblock_rescue', settings.codeBlockRescueMode);
+    checked('#rh_interaction_rescue', settings.interactionRescueMode);
     $('#rh_sampling_mode').val(settings.samplingMode || 'classic');
     checked('#rh_user_directive', settings.userDirectivePriority);
     checked('#rh_creative_expansion', settings.creativeExpansionMode);
@@ -88,6 +91,20 @@ export function initRabbitMirrorUI() {
             setTimeout(() => triggerCodeBlockRescue(), 900);
         } else {
             toastr?.success?.('已关闭代码块急救模式：后续兔子镜将恢复自由渲染。');
+        }
+    });
+    $('#rh_interaction_rescue').on('change', e => {
+        updateSettings({ interactionRescueMode: e.target.checked });
+        if (e.target.checked) {
+            toastr?.info?.('已开启智能交互急救：正在识别当前兔子镜的交互类型并选择修复路径；与代码块急救同时开启时，会先恢复代码再修交互。');
+            const runRescueChain = () => getSettings().codeBlockRescueMode
+                ? triggerCodeBlockRescue()
+                : triggerInteractionRescue();
+            setTimeout(runRescueChain, 80);
+            setTimeout(runRescueChain, 350);
+            setTimeout(runRescueChain, 900);
+        } else {
+            toastr?.success?.('已关闭智能交互急救：后续不再处理尚未急救的新兔子镜；已救过的旧消息仍会保持修复。');
         }
     });
     $('#rh_sampling_mode').on('change', e => updateSettings({ samplingMode: e.target.value }));

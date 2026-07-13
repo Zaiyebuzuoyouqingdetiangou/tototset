@@ -4,14 +4,14 @@
   "js": "index.js",
   "css": "style.css",
   "author": "Toto",
-  "version": "0.31.34",
-  "homePage": "https://github.com/Zaiyebuzuoyouqingdetiangou/toto",
+  "version": "0.31.73",
+  "homePage": "https://github.com/Zaiyebuzuoyouqingdetiangou/tototset",
   "auto_update": true,
-  "generate_interceptor": "rabbitHoleGenerateInterceptor",
+  "generate_interceptor": "rabbitMirrorGenerateInterceptor",
   "minimum_client_version": "1.13.0",
   "hooks": {
     "disable": "onDisable",
     "clean": "onClean"
   },
-  "description": "Rabbit Mirror Theater: 7.10 stable base with rabbit-mirror custom base with visible foreign-text translation rule and click-reliable interaction guidance."
+  "description": "Rabbit Mirror Theater test build: 7.10/0.31.50 generation baseline with current code and interaction rescue runtime."
 }
