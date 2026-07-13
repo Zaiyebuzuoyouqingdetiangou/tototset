@@ -7,7 +7,22 @@ function checked(id, value) {
     $(id).prop('checked', !!value);
 }
 
-export function initRabbitMirrorUI() {
+function findSettingsMount() {
+    const selectors = [
+        '#extensions_settings2',
+        '#extensions_settings',
+        '#extensions_settings_content',
+        '.extensions_settings',
+        '#extensions-settings',
+    ];
+    for (const selector of selectors) {
+        const node = document.querySelector(selector);
+        if (node) return node;
+    }
+    return null;
+}
+
+function mountRabbitMirrorUI() {
     const settings = getSettings();
     const noSendRegex = '/```(?:html|xml|HTML|XML)?\\s*<toto\\b[^>]*>[\\s\\S]*?<\\/toto>\\s*```|<toto\\b[^>]*>[\\s\\S]*?<\\/toto>\\s*/gi';
     if ($('#rabbit_mirror_theater_test_settings').length) return;
@@ -16,7 +31,7 @@ export function initRabbitMirrorUI() {
 <div id="rabbit_mirror_theater_test_settings" class="rabbit-mirror-settings">
   <div class="inline-drawer">
     <div class="inline-drawer-toggle inline-drawer-header">
-      <b>兔子镜小剧场 / Rabbit Mirror Theater</b><span class="rabbit-mirror-toto-watermark">Toto TEST v0.31.76</span>
+      <b>兔子镜小剧场 / Rabbit Mirror Theater</b><span class="rabbit-mirror-toto-watermark">Toto TEST v0.31.77</span>
       <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
     </div>
     <div class="inline-drawer-content">
@@ -68,7 +83,9 @@ export function initRabbitMirrorUI() {
   </div>
 </div>`;
 
-    $('#extensions_settings2').append(html);
+    const mount = findSettingsMount();
+    if (!mount) return false;
+    mount.insertAdjacentHTML('beforeend', html);
 
     checked('#rht_enabled', settings.autoRabbitMirrorInjection !== false && settings.enabled !== false);
     checked('#rht_codeblock_rescue', settings.codeBlockRescueMode);
@@ -145,4 +162,37 @@ export function initRabbitMirrorUI() {
         resetSettings();
         location.reload();
     });
+    return true;
 }
+
+export function initRabbitMirrorUI() {
+    if (document.getElementById('rabbit_mirror_theater_test_settings')) return;
+
+    let attempts = 0;
+    const tryMount = () => {
+        attempts += 1;
+        try {
+            if (mountRabbitMirrorUI()) {
+                console.log('[RabbitMirror Test] settings panel mounted');
+                return true;
+            }
+        } catch (error) {
+            console.error('[RabbitMirror Test] settings panel mount failed', error);
+            try { globalThis.toastr?.error?.('兔子镜测试版设置面板加载失败，请查看浏览器控制台。'); } catch {}
+            return true;
+        }
+        return false;
+    };
+
+    if (tryMount()) return;
+    const timer = setInterval(() => {
+        if (tryMount() || attempts >= 40) {
+            clearInterval(timer);
+            if (attempts >= 40 && !document.getElementById('rabbit_mirror_theater_test_settings')) {
+                console.error('[RabbitMirror Test] no compatible extension settings mount found');
+                try { globalThis.toastr?.error?.('兔子镜测试版已启用，但未找到扩展设置容器。请刷新页面后重试。'); } catch {}
+            }
+        }
+    }, 250);
+}
+
